@@ -1,15 +1,20 @@
 {
   "source": "https://api.comparadolar.ar/usd",
-  "respaldo": ["banco-nacion", "banco-provincia", "balanz", "uala", "cocos-bank", "brubank-ultra"],
-  "names": {
-    "banco-nacion": "Banco Nación",
-    "banco-provincia": "Banco Provincia",
-    "balanz": "Balanz",
-    "uala": "Ualá",
-    "cocos-bank": "Cocos",
-    "brubank-ultra": "Brubank"
-  },
+  "respaldo": [
+    "banco-nacion",
+    "banco-provincia",
+    "balanz",
+    "uala",
+    "cocos-bank",
+    "brubank-ultra"
+  ],
+  "names": {},
   "manual": [
-    { "name": "Naranja X", "buy": null, "sell": null, "updatedAt": null }
+    {
+      "name": "Naranja X",
+      "buy": null,
+      "sell": null,
+      "updatedAt": null
+    }
   ]
 }

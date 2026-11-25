@@ -108,25 +108,27 @@ function renderCol(c) {
     const d = S.rates;
     if (!d) return box.innerHTML = msg(S.err.rates ? 'No se pudo cargar: ' + esc(S.err.rates) : 'Cargando…');
     const list = d.providers.filter(p => !S.hidden.has(p.id));
-    const rows = list.filter(p => p[c] != null).sort((a, b) => c === 'buy' ? a.buy - b.buy : b.sell - a.sell);
+    const by = (a, b) => c === 'buy' ? a.buy - b.buy : b.sell - a.sell;
+    const priced = list.filter(p => p[c] != null);
+    const rows = priced.filter(p => !p.stale).sort(by).concat(priced.filter(p => p.stale).sort(by)); // los desactualizados van al final
     const all = rows.concat(list.filter(p => p[c] == null));
     if (!all.length) return box.innerHTML = msg('No hay proveedores seleccionados. Elegí alguno en Filtros.');
     box.innerHTML = `<table><thead><tr><th>Proveedor</th><th class="n">${c === 'buy' ? 'Comprás a' : 'Vendés a'}</th><th class="n">Spread</th></tr></thead><tbody>` +
-      all.map((p, i) => `<tr class="${i === 0 && p[c] != null ? 'best' : ''}">
-        <td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}
-          ${p.manual ? `<div class="sub">${p.updatedAt ? 'Cargado ' + manualAgo(p.updatedAt) : 'Sin cotización cargada'}</div>` : ''}</td>
+      all.map((p, i) => `<tr class="${i === 0 && p[c] != null && !p.stale ? 'best' : ''}">
+        <td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}${p.stale ? '<span class="chip">Desactualizado</span>' : ''}
+          ${p.manual ? `<div class="sub">${p.updatedAt ? 'Cargado ' + manualAgo(p.updatedAt) : 'Sin cotización cargada'}</div>` : ''}${p.conditions ? `<div class="sub">${esc(p.conditions)}</div>` : ''}${p.stale && p.updatedAt ? `<div class="sub">Último dato ${manualAgo(p.updatedAt)}</div>` : ''}</td>
         <td class="n price">${money(p[c])}</td>
         <td class="n">${p.spread != null ? p.spread.toFixed(2).replace('.', ',') + '%' : '—'}</td></tr>`).join('') + '</tbody></table>';
   } else {
     const d = S.p2p[c];
     if (!d) return box.innerHTML = msg(S.err[c] ? 'No se pudo cargar: ' + esc(S.err[c]) : 'Cargando…');
     if (!d.ads.length) return box.innerHTML = msg('Sin anuncios con estos filtros.');
-    box.innerHTML = `<table><thead><tr><th class="n">Precio</th><th>Anunciante</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
+    box.innerHTML = `<table><thead><tr><th>Anunciante</th><th class="n">Precio</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
       d.ads.map((a, i) => `<tr class="${i === 0 ? 'best' : ''}">
-        <td class="n price">${money(a.price)}</td>
         <td>${esc(a.nick)}${a.verified ? '<span class="chip">Verificado</span>' : ''}
           <div class="sub">${a.orders ?? '—'} órdenes/mes · ${a.rate != null ? a.rate.toFixed(0) + '%' : '—'}</div>
           <div class="sub">${esc(a.methods.slice(0, 3).join(', '))}${a.methods.length > 3 ? ' +' + (a.methods.length - 3) : ''}</div></td>
+        <td class="n price">${money(a.price)}</td>
         <td class="n">${fmtN(a.available)} USDT<div class="sub">$${a.min.toLocaleString('es-AR')} – $${a.max.toLocaleString('es-AR')}</div></td></tr>`).join('') + '</tbody></table>';
   }
 }

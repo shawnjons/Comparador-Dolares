@@ -33,7 +33,7 @@ exports.handler = async (event) => {
     const items = flatten(raw).map(o => ({
       o,
       id: pick(o, ['slug', 'id', 'key']) || pick(o, ['name', 'nombre', 'title']),
-      type: String(pick(o, ['type', 'tipo', 'category', 'categoria', 'kind', 'group', 'market', 'segment']) ?? o._group ?? '')
+      type: String(pick(o, ['usdType', 'type', 'tipo', 'category', 'categoria', 'kind', 'group', 'market', 'segment']) ?? o._group ?? '')
     })).filter(x => x.id);
 
     const types = [...new Set(items.map(x => x.type).filter(Boolean))];
@@ -48,17 +48,19 @@ exports.handler = async (event) => {
       const rawName = pick(o, ['name', 'nombre', 'title']) || id;
       providers.push({
         id,
-        name: cfg.names?.[id] || pretty(rawName),
+        name: cfg.names?.[id] || o.prettyName || pretty(rawName),
         buy: num(pick(o, ['totalAsk', 'ask', 'venta', 'sell', 'price'])),   // lo que pagás para comprar USD
         sell: num(pick(o, ['totalBid', 'bid', 'compra', 'buy'])),           // lo que te pagan al vender USD
         h24: !!pick(o, ['is24x7', 'h24', 'always']),
-        updatedAt: pick(o, ['updatedAt', 'time', 'timestamp', 'fecha']) || null
+        stale: !!o.stale,                       // dato viejo: ComparaDólar lo marca como desactualizado
+        conditions: o.conditions || null,       // ej. "Solo para clientes Ultra"
+        updatedAt: pick(o, ['lastSeenAt', 'updatedAt', 'time', 'timestamp', 'fecha']) || null
       });
     }
     for (const m of cfg.manual || []) providers.push({ id: 'manual-' + norm(m.name), name: m.name, buy: num(m.buy), sell: num(m.sell), manual: true, updatedAt: m.updatedAt });
     for (const p of providers) p.spread = p.buy && p.sell ? ((p.buy - p.sell) / p.buy) * 100 : null;
 
-    return reply({ updatedAt: new Date().toISOString(), meta: { mode, types }, providers });
+    return reply({ updatedAt: new Date().toISOString(), meta: { mode, types, total: items.length, fields: items[0] ? Object.keys(items[0].o) : [] }, providers });
   } catch (e) {
     return reply({ error: e.message }, 502);
   }
