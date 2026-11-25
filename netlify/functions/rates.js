@@ -31,7 +31,7 @@ exports.handler = async (event) => {
       const buy = num(pick(o, ['totalAsk', 'ask', 'venta', 'sell', 'price']));
       const sell = num(pick(o, ['totalBid', 'bid', 'compra', 'buy']));
       providers.push({
-        id, name, buy, sell,
+        id, name: (cfg.names && cfg.names[id]) || name, buy, sell,
         h24: !!pick(o, ['is24x7', 'h24', 'always']),
         updatedAt: pick(o, ['updatedAt', 'time', 'timestamp', 'fecha']) || null
       });

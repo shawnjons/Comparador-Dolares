@@ -41,6 +41,8 @@ tr.best td{background:var(--best)}
 .msg{padding:28px 16px;text-align:center;color:var(--mute)}
 .foot{margin-top:18px;color:var(--mute);font-size:12.5px}
 a{color:var(--acc)}
+.chk{display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
+.chk input{width:auto}
 </style>
 </head>
 <body>
@@ -68,6 +70,7 @@ a{color:var(--acc)}
         <button data-v="BUY" aria-pressed="false">Quiero comprar USDT</button>
       </div>
       <input id="amt" type="number" min="0" inputmode="numeric" placeholder="Monto en ARS" aria-label="Filtrar por monto en pesos">
+      <label class="chk"><input type="checkbox" id="ver"> Solo anunciantes verificados</label>
       <a href="https://p2p.binance.com/trade/sell/USDT?fiat=ARS&payment=all-payments" target="_blank" rel="noopener">Abrir en Binance</a>
     </div>
     <div class="wrap"><table><thead><tr><th class="n">Precio</th><th>Anunciante</th><th class="n">Disponible</th><th class="n">Límites (ARS)</th><th>Medios de pago</th></tr></thead><tbody id="p-body"></tbody></table></div>
@@ -80,7 +83,7 @@ const REFRESH_MS = 15000; // cada cuánto se consulta; la caché de las funcione
 const $ = s => document.querySelector(s);
 const money = n => n == null ? '—' : '$' + n.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const st = {tab: 'oficial', o: 'buy', p: 'SELL', data: {}, at: {}, err: null};
+const st = {tab: 'oficial', o: 'buy', p: 'SELL', m: false, data: {}, at: {}, err: null};
 
 function ago(t) {
   if (!t) return '';
@@ -110,7 +113,7 @@ function renderP2P() {
   $('#p-body').innerHTML = ads.map((a, i) => `
     <tr class="${i === 0 ? 'best' : ''}">
       <td class="n price">${money(a.price)}</td>
-      <td>${esc(a.nick)}<div class="sub">${a.orders ?? '—'} órdenes/mes · ${a.rate != null ? a.rate.toFixed(0) + '% completadas' : '—'}</div></td>
+      <td>${esc(a.nick)}${a.verified ? '<span class="chip">Verificado</span>' : ''}<div class="sub">${a.orders ?? '—'} órdenes/mes · ${a.rate != null ? a.rate.toFixed(0) + '% completadas' : '—'}</div></td>
       <td class="n">${a.available.toLocaleString('es-AR', {maximumFractionDigits: 2})} USDT</td>
       <td class="n">${a.min.toLocaleString('es-AR')} – ${a.max.toLocaleString('es-AR')}</td>
       <td class="sub">${esc(a.methods.slice(0, 3).join(', '))}${a.methods.length > 3 ? ' +' + (a.methods.length - 3) : ''}</td>
@@ -127,7 +130,7 @@ function renderStatus() {
 async function load() {
   if (document.hidden) return;
   const tab = st.tab;
-  const url = tab === 'oficial' ? '/api/rates' : '/api/p2p?type=' + st.p;
+  const url = tab === 'oficial' ? '/api/rates' : '/api/p2p?type=' + st.p + (st.m ? '&merchant=1' : '');
   try {
     const r = await fetch(url);
     const j = await r.json();
@@ -149,6 +152,7 @@ function seg(id, key, fn) {
 seg('#seg-o', 'o', renderOficial);
 seg('#seg-p', 'p', () => { st.data.p2p = null; $('#p-body').innerHTML = '<tr><td colspan="5" class="msg">Cargando…</td></tr>'; load(); });
 $('#amt').addEventListener('input', renderP2P);
+$('#ver').addEventListener('change', e => { st.m = e.target.checked; st.data.p2p = null; $('#p-body').innerHTML = '<tr><td colspan="5" class="msg">Cargando…</td></tr>'; load(); });
 
 ['oficial', 'p2p'].forEach(t => $('#t-' + t).addEventListener('click', () => {
   st.tab = t; st.err = null;

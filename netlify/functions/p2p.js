@@ -13,7 +13,7 @@ exports.handler = async (event) => {
       headers: { 'content-type': 'application/json', 'user-agent': 'Mozilla/5.0' },
       body: JSON.stringify({
         fiat: 'ARS', asset: 'USDT', tradeType, page: 1, rows: 20,
-        countries: [], payTypes: [], publisherType: null, proMerchantAds: false, shieldMerchantAds: false
+        countries: [], payTypes: [], publisherType: event.queryStringParameters?.merchant === '1' ? 'merchant' : null, proMerchantAds: false, shieldMerchantAds: false
       })
     });
     if (!r.ok) throw new Error('Binance respondió ' + r.status);
@@ -25,6 +25,7 @@ exports.handler = async (event) => {
       max: +adv.maxSingleTransAmount,
       methods: (adv.tradeMethods || []).map(m => m.tradeMethodName || m.identifier).filter(Boolean),
       nick: advertiser.nickName,
+      verified: advertiser.userType === 'merchant',
       orders: advertiser.monthOrderCount,
       rate: advertiser.monthFinishRate != null ? advertiser.monthFinishRate * 100 : null
     }));
