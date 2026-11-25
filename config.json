@@ -1,0 +1,7 @@
+{
+  "source": "https://api.comparadolar.ar/usd",
+  "oficial": ["banco-nacion", "banco-provincia", "balanz", "uala", "cocos-bank", "brubank-ultra"],
+  "manual": [
+    { "name": "Naranja X", "tag": "Manual", "buy": null, "sell": null, "updatedAt": null }
+  ]
+}

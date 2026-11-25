@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dólar hoy · oficial y USDT P2P</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4f6;--card:#fff;--ink:#14202b;--mute:#667585;--line:#dde3e9;--acc:#0b6bcb;--ok:#0a7d4f;--best:#e7f5ee}
+@media (prefers-color-scheme:dark){:root{--bg:#10161c;--card:#18212a;--ink:#e8eef3;--mute:#8d9cab;--line:#2a3743;--acc:#5aa8f5;--ok:#4cc38a;--best:#15332a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif}
+main{max-width:920px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:28px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.status{color:var(--mute);font-size:13px;display:flex;align-items:center;gap:8px;min-height:20px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);animation:p 2s infinite}
+.dot.err{background:#c0392b;animation:none}
+@keyframes p{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--line);margin:20px 0 14px}
+.tabs button{background:none;border:0;padding:10px 0;font:inherit;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--ink);border-color:var(--acc)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;padding:7px 14px;font:inherit;font-weight:600;color:var(--mute);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--acc);color:#fff}
+input{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:170px}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.wrap{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:520px}
+th{font-weight:600;color:var(--mute);font-size:13px;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border:0}
+.n{text-align:right;font-variant-numeric:tabular-nums}
+th.n{text-align:right}
+tr.best td{background:var(--best)}
+.price{font-weight:800;font-size:16px}
+.chip{font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:6px;color:var(--mute);white-space:nowrap}
+.sub{color:var(--mute);font-size:12.5px}
+.msg{padding:28px 16px;text-align:center;color:var(--mute)}
+.foot{margin-top:18px;color:var(--mute);font-size:12.5px}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Dólar hoy</h1>
+  <div class="status" id="status" aria-live="polite"><span class="dot"></span><span>Cargando…</span></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="t-oficial" aria-selected="true">Dólar oficial</button>
+    <button role="tab" id="t-p2p" aria-selected="false">USDT en Binance P2P</button>
+  </div>
+
+  <section id="oficial">
+    <div class="bar"><div class="seg" id="seg-o">
+      <button data-v="buy" aria-pressed="true">Quiero comprar</button>
+      <button data-v="sell" aria-pressed="false">Quiero vender</button>
+    </div></div>
+    <div class="wrap"><table><thead><tr><th>Proveedor</th><th class="n" id="o-col">Comprás a</th><th class="n">Spread</th></tr></thead><tbody id="o-body"></tbody></table></div>
+  </section>
+
+  <section id="p2p" hidden>
+    <div class="bar">
+      <div class="seg" id="seg-p">
+        <button data-v="SELL" aria-pressed="true">Quiero vender USDT</button>
+        <button data-v="BUY" aria-pressed="false">Quiero comprar USDT</button>
+      </div>
+      <input id="amt" type="number" min="0" inputmode="numeric" placeholder="Monto en ARS" aria-label="Filtrar por monto en pesos">
+      <a href="https://p2p.binance.com/trade/sell/USDT?fiat=ARS&payment=all-payments" target="_blank" rel="noopener">Abrir en Binance</a>
+    </div>
+    <div class="wrap"><table><thead><tr><th class="n">Precio</th><th>Anunciante</th><th class="n">Disponible</th><th class="n">Límites (ARS)</th><th>Medios de pago</th></tr></thead><tbody id="p-body"></tbody></table></div>
+  </section>
+
+  <p class="foot">Datos informativos, sin garantía de exactitud. El precio final depende de comisiones y condiciones de cada plataforma. En P2P, verificá siempre al anunciante antes de operar.</p>
+</main>
+<script>
+const REFRESH_MS = 15000; // cada cuánto se consulta; la caché de las funciones es de 10 s
+const $ = s => document.querySelector(s);
+const money = n => n == null ? '—' : '$' + n.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const st = {tab: 'oficial', o: 'buy', p: 'SELL', data: {}, at: {}, err: null};
+
+function ago(t) {
+  if (!t) return '';
+  const s = Math.max(0, Math.round((Date.now() - new Date(t)) / 1000));
+  return s < 60 ? `hace ${s} s` : s < 3600 ? `hace ${Math.round(s / 60)} min` : s < 86400 ? `hace ${Math.round(s / 3600)} h` : `hace ${Math.round(s / 86400)} d`;
+}
+
+function renderOficial() {
+  const d = st.data.oficial; if (!d) return;
+  const buy = st.o === 'buy', key = buy ? 'buy' : 'sell';
+  $('#o-col').textContent = buy ? 'Comprás a' : 'Vendés a';
+  const rows = d.providers.filter(p => p[key] != null).sort((a, b) => buy ? a[key] - b[key] : b[key] - a[key]);
+  const none = d.providers.filter(p => p[key] == null);
+  $('#o-body').innerHTML = rows.concat(none).map((p, i) => `
+    <tr class="${i === 0 && p[key] != null ? 'best' : ''}">
+      <td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}
+        ${p.manual ? `<div class="sub">${p.updatedAt ? 'Cargado ' + ago(p.updatedAt) : 'Sin cotización cargada'}</div>` : ''}</td>
+      <td class="n price">${money(p[key])}</td>
+      <td class="n">${p.spread != null ? p.spread.toFixed(2).replace('.', ',') + '%' : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="3" class="msg">No hay proveedores para mostrar. Revisá config.json.</td></tr>';
+}
+
+function renderP2P() {
+  const d = st.data.p2p; if (!d) return;
+  const amt = +$('#amt').value || 0;
+  const ads = d.ads.filter(a => !amt || (amt >= a.min && amt <= a.max));
+  $('#p-body').innerHTML = ads.map((a, i) => `
+    <tr class="${i === 0 ? 'best' : ''}">
+      <td class="n price">${money(a.price)}</td>
+      <td>${esc(a.nick)}<div class="sub">${a.orders ?? '—'} órdenes/mes · ${a.rate != null ? a.rate.toFixed(0) + '% completadas' : '—'}</div></td>
+      <td class="n">${a.available.toLocaleString('es-AR', {maximumFractionDigits: 2})} USDT</td>
+      <td class="n">${a.min.toLocaleString('es-AR')} – ${a.max.toLocaleString('es-AR')}</td>
+      <td class="sub">${esc(a.methods.slice(0, 3).join(', '))}${a.methods.length > 3 ? ' +' + (a.methods.length - 3) : ''}</td>
+    </tr>`).join('') || `<tr><td colspan="5" class="msg">${amt ? 'Ningún anuncio acepta ese monto.' : 'Sin anuncios.'}</td></tr>`;
+}
+
+function renderStatus() {
+  const t = st.at[st.tab];
+  $('#status').innerHTML = st.err
+    ? `<span class="dot err"></span><span>No se pudo actualizar: ${esc(st.err)}. ${t ? 'Mostrando datos de ' + ago(t) + '.' : ''}</span>`
+    : `<span class="dot"></span><span>${t ? 'Actualizado ' + ago(t) + ' · se renueva cada ' + REFRESH_MS / 1000 + ' s' : 'Cargando…'}</span>`;
+}
+
+async function load() {
+  if (document.hidden) return;
+  const tab = st.tab;
+  const url = tab === 'oficial' ? '/api/rates' : '/api/p2p?type=' + st.p;
+  try {
+    const r = await fetch(url);
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || 'Error ' + r.status);
+    st.data[tab] = j; st.at[tab] = Date.now(); st.err = null;
+    tab === 'oficial' ? renderOficial() : renderP2P();
+  } catch (e) { st.err = e.message; }
+  renderStatus();
+}
+
+function seg(id, key, fn) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    st[key] = b.dataset.v;
+    $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    fn();
+  });
+}
+seg('#seg-o', 'o', renderOficial);
+seg('#seg-p', 'p', () => { st.data.p2p = null; $('#p-body').innerHTML = '<tr><td colspan="5" class="msg">Cargando…</td></tr>'; load(); });
+$('#amt').addEventListener('input', renderP2P);
+
+['oficial', 'p2p'].forEach(t => $('#t-' + t).addEventListener('click', () => {
+  st.tab = t; st.err = null;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.id === 't-' + t));
+  $('#oficial').hidden = t !== 'oficial'; $('#p2p').hidden = t !== 'p2p';
+  renderStatus(); load();
+}));
+
+document.addEventListener('visibilitychange', load);
+setInterval(load, REFRESH_MS);
+setInterval(renderStatus, 1000);
+load();
+</script>
+</body>
+</html>

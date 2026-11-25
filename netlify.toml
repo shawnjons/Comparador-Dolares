@@ -1,0 +1,18 @@
+[build]
+  publish = "public"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/rates"
+  to = "/.netlify/functions/rates"
+  status = 200
+
+[[redirects]]
+  from = "/api/p2p"
+  to = "/.netlify/functions/p2p"
+  status = 200
