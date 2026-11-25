@@ -50,6 +50,9 @@ details{border-top:1px solid var(--line);padding:10px 0}
 summary{font-weight:700;cursor:pointer;padding:2px 0}
 .acts{display:flex;gap:8px;margin:10px 0}
 .chk{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
+.fld{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0}
+select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -77,12 +80,20 @@ summary{font-weight:700;cursor:pointer;padding:2px 0}
       <div id="plist" class="sub">Cargando…</div></details>
     <details><summary>USDT en Binance</summary>
       <label class="chk"><input type="checkbox" id="ver"> Solo anunciantes verificados</label></details>
+    <details><summary>Actualización automática</summary>
+      <label class="fld">Dólar oficial <select id="ev-rates"></select></label>
+      <label class="fld">USDT Binance <select id="ev-p2p"></select></label>
+      <p class="sub">Al abrir o recargar la página siempre se actualiza una vez. Si la pestaña está en segundo plano, no consulta nada.</p></details>
   </aside>
 
   <p class="foot">Datos informativos, sin garantía de exactitud. El precio final depende de comisiones y condiciones de cada plataforma. En P2P, verificá siempre al anunciante antes de operar.</p>
 </main>
 <script>
-const EVERY = {rates: 60000, p2p: 5000}; // dólar oficial: 1 min · USDT Binance: 5 s
+// Opciones de actualización automática, en segundos (0 = no actualizar)
+const OPT = {
+  rates: [[0, 'No actualizar'], [600, '10 minutos'], [300, '5 minutos'], [120, '2 minutos'], [60, '1 minuto']],
+  p2p: [[0, 'No actualizar'], [60, '1 minuto'], [30, '30 segundos'], [10, '10 segundos'], [5, '5 segundos']]
+};
 const $ = s => document.querySelector(s);
 const money = n => n == null ? '—' : '$' + n.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -91,7 +102,8 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 const S = {sub: {buy: 'oficial', sell: 'oficial'}, hidden: new Set(LS.get('hidden', [])), ver: !!LS.get('ver', false),
-  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: ''};
+  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '',
+  ev: {rates: LS.get('evRates', 300), p2p: LS.get('evP2P', 30)}};
 const wants = src => S.sub.buy === src || S.sub.sell === src;
 
 function ago(t) {
@@ -113,12 +125,11 @@ function renderCol(c) {
     const rows = priced.filter(p => !p.stale).sort(by).concat(priced.filter(p => p.stale).sort(by)); // los desactualizados van al final
     const all = rows.concat(list.filter(p => p[c] == null));
     if (!all.length) return box.innerHTML = msg('No hay proveedores seleccionados. Elegí alguno en Filtros.');
-    box.innerHTML = `<table><thead><tr><th>Proveedor</th><th class="n">${c === 'buy' ? 'Comprás a' : 'Vendés a'}</th><th class="n">Spread</th></tr></thead><tbody>` +
+    box.innerHTML = `<table><thead><tr><th>Proveedor</th><th class="n">${c === 'buy' ? 'Comprás a' : 'Vendés a'}</th></tr></thead><tbody>` +
       all.map((p, i) => `<tr class="${i === 0 && p[c] != null && !p.stale ? 'best' : ''}">
         <td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}${p.stale ? '<span class="chip">Desactualizado</span>' : ''}
           ${p.manual ? `<div class="sub">${p.updatedAt ? 'Cargado ' + manualAgo(p.updatedAt) : 'Sin cotización cargada'}</div>` : ''}${p.conditions ? `<div class="sub">${esc(p.conditions)}</div>` : ''}${p.stale && p.updatedAt ? `<div class="sub">Último dato ${manualAgo(p.updatedAt)}</div>` : ''}</td>
-        <td class="n price">${money(p[c])}</td>
-        <td class="n">${p.spread != null ? p.spread.toFixed(2).replace('.', ',') + '%' : '—'}</td></tr>`).join('') + '</tbody></table>';
+        <td class="n price">${money(p[c])}</td></tr>`).join('') + '</tbody></table>';
   } else {
     const d = S.p2p[c];
     if (!d) return box.innerHTML = msg(S.err[c] ? 'No se pudo cargar: ' + esc(S.err[c]) : 'Cargando…');
@@ -136,9 +147,9 @@ const renderAll = () => { renderCol('buy'); renderCol('sell'); };
 
 function renderStatus() {
   const bits = [], errs = [];
-  if (wants('oficial')) S.err.rates ? errs.push('dólar oficial: ' + S.err.rates) : bits.push('Dólar oficial ' + (S.at.rates ? ago(S.at.rates) : 'cargando…'));
+  if (wants('oficial')) S.err.rates ? errs.push('dólar oficial: ' + S.err.rates) : bits.push('Dólar oficial ' + (S.at.rates ? ago(S.at.rates) : 'cargando…') + (S.ev.rates ? '' : ' (manual)'));
   for (const c of ['buy', 'sell']) if (S.sub[c] === 'p2p')
-    S.err[c] ? errs.push('USDT ' + (c === 'buy' ? 'compra' : 'venta') + ': ' + S.err[c]) : bits.push('USDT ' + (c === 'buy' ? 'compra' : 'venta') + ' ' + (S.at[c] ? ago(S.at[c]) : 'cargando…'));
+    S.err[c] ? errs.push('USDT ' + (c === 'buy' ? 'compra' : 'venta') + ': ' + S.err[c]) : bits.push('USDT ' + (c === 'buy' ? 'compra' : 'venta') + ' ' + (S.at[c] ? ago(S.at[c]) : 'cargando…') + (S.ev.p2p ? '' : ' (manual)'));
   $('#status').innerHTML = `<span class="dot ${errs.length ? 'err' : ''}"></span><span>${errs.length ? 'No se pudo actualizar (' + esc(errs.join(' · ')) + ')' : esc(bits.join(' · '))}</span>`;
 }
 
@@ -163,13 +174,14 @@ async function loadP2P(c) {
   S.busy[c] = false; renderCol(c); renderStatus();
 }
 const loadNow = () => { loadRates(); loadP2P('buy'); loadP2P('sell'); };
+const ensure = () => { if (!S.rates) loadRates(); ['buy', 'sell'].forEach(c => { if (!S.p2p[c]) loadP2P(c); }); };
 
 // Pestañas Dólar oficial / USDT Binance de cada columna
 document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const c = seg.dataset.c; S.sub[c] = b.dataset.s;
   seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-  renderCol(c); renderStatus(); loadNow();
+  renderCol(c); renderStatus(); ensure();
 }));
 
 // Panel de filtros
@@ -199,11 +211,25 @@ $('#fclose').onclick = () => togglePanel(false);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#panel').hidden) togglePanel(false); });
 document.addEventListener('click', e => { if (!$('#panel').hidden && !e.target.closest('#panel,#fbtn')) { $('#panel').hidden = true; $('#fbtn').setAttribute('aria-expanded', false); } });
 
-document.addEventListener('visibilitychange', loadNow);
-setInterval(loadRates, EVERY.rates);
-setInterval(() => { loadP2P('buy'); loadP2P('sell'); }, EVERY.p2p);
+const T = {};
+function schedule() {
+  clearInterval(T.r); clearInterval(T.p);
+  if (S.ev.rates) T.r = setInterval(loadRates, S.ev.rates * 1000);
+  if (S.ev.p2p) T.p = setInterval(() => { loadP2P('buy'); loadP2P('sell'); }, S.ev.p2p * 1000);
+}
+for (const [key, id, ls] of [['rates', '#ev-rates', 'evRates'], ['p2p', '#ev-p2p', 'evP2P']]) {
+  const sel = $(id);
+  sel.innerHTML = OPT[key].map(([v, t]) => `<option value="${v}" ${v === S.ev[key] ? 'selected' : ''}>${t}</option>`).join('');
+  sel.addEventListener('change', () => { S.ev[key] = +sel.value; LS.set(ls, S.ev[key]); schedule(); renderStatus(); });
+}
+// Al volver a la pestaña, actualiza solo lo que tiene actualización automática activada
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (S.ev.rates) loadRates();
+  if (S.ev.p2p) { loadP2P('buy'); loadP2P('sell'); }
+});
 setInterval(renderStatus, 1000);
-renderAll(); renderStatus(); loadNow();
+schedule(); renderAll(); renderStatus(); loadNow(); // siempre se actualiza una vez al abrir o recargar
 </script>
 </body>
 </html>
