@@ -1,7 +1,7 @@
 // Anuncios P2P de USDT/ARS en Binance. type=SELL: vos vendés USDT. type=BUY: vos comprás.
 const reply = (body, status = 200) => ({
   statusCode: status,
-  headers: { 'content-type': 'application/json', 'Netlify-CDN-Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' },
+  headers: { 'content-type': 'application/json', 'Netlify-CDN-Cache-Control': 'public, s-maxage=4, stale-while-revalidate=10' },
   body: JSON.stringify(body)
 });
 
