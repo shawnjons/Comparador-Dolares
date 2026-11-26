@@ -77,7 +77,10 @@ exports.handler = async (event) => {
       const bid = o => o && num(pick(o, ['totalBid', 'bid', 'compra', 'buy']));
       const usdBid = bid(o1), usdtBid = bid(o2);
       const rate = usdBid && usdtBid ? usdBid / usdtBid : null;
-      if (rate && rate > 0.5 && rate < 1.5) fiwind = { rate, usdBid, usdtBid, at: pick(o2, ['time', 'lastSeenAt', 'updatedAt']) || null };
+      if (rate && rate > 0.5 && rate < 1.5) {
+        const ts = [o1, o2].map(o => Date.parse(pick(o, ['time', 'lastSeenAt', 'updatedAt']) || '')).filter(Number.isFinite);
+        fiwind = { rate, usdBid, usdtBid, at: ts.length ? new Date(Math.min(...ts)).toISOString() : null }; // se toma el dato más viejo de los dos
+      }
     } catch {}
 
     return reply({ updatedAt: new Date().toISOString(), fiwind, meta: { mode, types, total: items.length, fields: items[0] ? Object.keys(items[0].o) : [] }, providers });
