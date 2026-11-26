@@ -78,14 +78,14 @@ td.ic,th.ic{width:1%;padding-right:0}
 .calc td.v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;width:50%}
 .calc td.x{text-align:right;color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px}
 .calc .sub{font-weight:400}
-.calc tr.who td{border-bottom:0;padding:0 0 5px;font-size:12px;color:var(--mute);text-align:left;font-weight:400}
-.calc tr.who td.neg{color:#c0392b}
+.calc .who{font-size:12px;overflow-wrap:anywhere}
+.calc .neg{color:#c0392b;font-size:11.5px}
 .calc tr.sum td,.calc tr.tot td{border-top:1px solid var(--ink)}
 .calc tr.tot td{font-size:14.5px;border-bottom:0}
 .calc input{width:100%;margin:0;padding:4px 7px;text-align:right;font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
 .calc input.auto{color:var(--mute);font-weight:500}
 .inb{position:relative}
-.inb input{padding-left:66px}
+.inb input{padding-left:38px}
 .inb-t{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:500;color:var(--mute)}
 .inb-t button{border:0;background:none;padding:0;font:inherit;color:var(--acc);cursor:pointer;text-decoration:underline}
 .arb-msg{padding:8px 14px 0}
@@ -113,19 +113,16 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
       <div class="box" id="b-sell"></div></section>
     <aside class="col arb"><h2>Arbitraje</h2>
       <table class="calc" id="calc"><tbody>
-        <tr><td>Compra ARS/USD</td><td class="v"><span class="tag" id="c-tagb"></span> <span id="c-buy">—</span></td><td class="x" id="c-spread"></td></tr>
-        <tr class="who"><td colspan="3" id="c-buyname"></td></tr>
+        <tr><td>Compra ARS/USD<div class="sub who" id="c-buyname"></div></td><td class="v"><span class="tag" id="c-tagb"></span> <span id="c-buy">—</span></td><td class="x" id="c-spread"></td></tr>
         <tr><td>Total ARS</td><td class="v"><input id="ars" inputmode="decimal" autocomplete="off" aria-label="Total en pesos"></td><td class="x"></td></tr>
         <tr><td>Total USD</td><td class="v"><input id="usd" inputmode="decimal" autocomplete="off" aria-label="Total en dólares"></td><td class="x"></td></tr>
-        <tr><td>Conversión a USDT<div class="sub">por cada 1.000 USD</div></td><td class="v"><div class="inb"><input id="fw" inputmode="decimal" autocomplete="off" aria-label="USDT por cada 1.000 USD"><span class="inb-t" id="fw-tag"></span></div></td><td class="x" id="c-ratio"></td></tr>
-        <tr class="who" id="fw-note-row" hidden><td colspan="3" class="neg" id="fw-note"></td></tr>
+        <tr><td>Conversión a USDT<div class="sub">por cada 1.000 USD</div><div class="sub neg" id="fw-note" hidden></div></td><td class="v"><div class="inb"><input id="fw" inputmode="decimal" autocomplete="off" aria-label="USDT por cada 1.000 USD"><span class="inb-t" id="fw-tag"></span></div></td><td class="x" id="c-ratio"></td></tr>
         <tr><td>Fee conversión</td><td class="v" id="c-fee">—</td><td class="x"></td></tr>
         <tr><td>USDT</td><td class="v" id="c-usdt">—</td><td class="x"></td></tr>
         <tr><td>Fee retiro</td><td class="v"><input id="fee-w" inputmode="decimal" autocomplete="off" aria-label="Fee de retiro en USDT"></td><td class="x">USDT</td></tr>
         <tr><td>Fee venta P2P</td><td class="v"><input id="fee-p" inputmode="decimal" autocomplete="off" aria-label="Fee de venta P2P en USDT"></td><td class="x">USDT</td></tr>
         <tr class="sum"><td>USDT final</td><td class="v" id="c-net">—</td><td class="x"></td></tr>
-        <tr><td>Venta ARS/USDT</td><td class="v"><span class="tag" id="c-tags"></span> <span id="c-sell">—</span></td><td class="x"></td></tr>
-        <tr class="who"><td colspan="3" id="c-sellname"></td></tr>
+        <tr><td>Venta ARS/USDT<div class="sub who" id="c-sellname"></div></td><td class="v"><span class="tag" id="c-tags"></span> <span id="c-sell">—</span></td><td class="x"></td></tr>
         <tr><td>Total ARS venta</td><td class="v" id="c-sale">—</td><td class="x"></td></tr>
         <tr class="tot"><td>Ganancia</td><td class="v" id="c-gain">—</td><td class="x" id="c-pct"></td></tr>
       </tbody></table>
@@ -283,13 +280,14 @@ function renderArb() {
   // Conversión a USDT (por 1.000 USD): automática (gris) o manual
   const fwEl = $('#fw'); fwEl.classList.toggle('auto', !manual);
   setV('fw', plain(p1k));
-  put('fw-tag', manual ? '<button type="button" id="fw-auto" title="Volver a la tasa automática">↺ auto</button>' : (auto ? 'automática' : 'sin dato'));
+  put('fw-tag', manual ? '<button type="button" id="fw-auto" title="Volver a la tasa automática">↺ auto</button>' : (auto ? 'aut.' : 'sin dato'));
   put('c-ratio', p1k ? (1000 / p1k).toLocaleString('es-AR', {minimumFractionDigits: 4, maximumFractionDigits: 4}) : '');
   setV('fee-w', plain(S.fee.w)); setV('fee-p', plain(S.fee.p));
   const fa = S.rates?.fiwind?.at ? Date.parse(S.rates.fiwind.at) : null, mt = S.fw?.at;
-  const note = manual ? (mt && Date.now() - mt > 600000 ? 'Tasa manual cargada ' + ago(mt) + ': revisá que siga vigente.' : '')
-    : (fa && Date.now() - fa > 1800000 ? 'El precio de Fiwind en ComparaDólar no cambia desde ' + ago(fa) + ': confirmá la tasa en la app.' : '');
-  put('fw-note', esc(note)); $('#fw-note-row').hidden = !note;
+  const sh = t => ago(t).replace('hace ', '').replace(' ', ''); // "39min", "2h"
+  const note = manual ? (mt && Date.now() - mt > 600000 ? `cargada: ${sh(mt)}. Chequear tasa` : '')
+    : (fa && Date.now() - fa > 1800000 ? `ult. act: ${sh(fa)}. Chequear tasa` : '');
+  put('fw-note', esc(note)); $('#fw-note').hidden = !note;
 
   // Resultado
   const ok = buy && top && usd > 0 && p1k;
@@ -393,7 +391,12 @@ $('#usd').addEventListener('input', e => { const v = pn(e.target.value); S.amt =
 $('#ars').addEventListener('input', e => { const v = pn(e.target.value); S.amt = {kind: 'ars', v: v > 0 ? v : null}; LS.set('amt', S.amt); renderArb(); });
 for (const [id, k] of [['#fee-w', 'w'], ['#fee-p', 'p']])
   $(id).addEventListener('input', e => { const v = pn(e.target.value); S.fee[k] = v >= 0 ? v : 0; LS.set('fee', S.fee); renderArb(); });
-for (const id of ['#usd', '#ars', '#fw', '#fee-w', '#fee-p']) $(id).addEventListener('blur', renderArb);
+for (const id of ['#usd', '#ars', '#fw', '#fee-w', '#fee-p']) {
+  const el = $(id); let fresh = false;
+  el.addEventListener('blur', renderArb); // si queda vacío, vuelve el valor automático
+  el.addEventListener('focus', () => { fresh = true; setTimeout(() => el.select(), 0); });
+  el.addEventListener('mouseup', e => { if (fresh) { e.preventDefault(); fresh = false; } }); // evita que el clic deseleccione
+}
 $('#calc').addEventListener('click', e => { if (e.target.id === 'fw-auto') { S.fw = null; LS.set('fw', null); renderArb(); } });
 $('#ver').addEventListener('change', e => {
   S.ver = e.target.checked; LS.set('ver', S.ver); S.gen++; S.p2p = {buy: null, sell: null}; renderAll(); loadP2P('buy'); loadP2P('sell');
