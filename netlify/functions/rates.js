@@ -6,6 +6,12 @@ const norm = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u030
 const num = v => { const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
 const pick = (o, keys) => { for (const k of keys) if (o[k] != null) return o[k]; };
 const pretty = s => String(s).replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+const USDT_SRC = cfg.usdtSource || cfg.source.replace(/\/usd$/, '/usdt');
+async function fetchJson(url) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 5000);
+  try { const r = await fetch(url, { headers: { accept: 'application/json' }, signal: ctl.signal }); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  finally { clearTimeout(t); }
+}
 const reply = (body, status = 200) => ({
   statusCode: status,
   headers: { 'content-type': 'application/json', 'Netlify-CDN-Cache-Control': 'public, s-maxage=20, stale-while-revalidate=40' },
@@ -25,9 +31,11 @@ function flatten(raw) {
 
 exports.handler = async (event) => {
   try {
+    const usdtP = fetchJson(USDT_SRC).catch(() => null); // se pide en paralelo; si falla, se ignora
     const r = await fetch(cfg.source, { headers: { accept: 'application/json' } });
     if (!r.ok) throw new Error('La fuente respondió ' + r.status);
     const raw = await r.json();
+    if (event.queryStringParameters?.raw === 'usdt') return reply(await usdtP);
     if (event.queryStringParameters?.raw) return reply(raw);
 
     const items = flatten(raw).map(o => ({
@@ -60,7 +68,19 @@ exports.handler = async (event) => {
     }
     for (const m of cfg.manual || []) providers.push({ id: 'manual-' + norm(m.name), name: m.name, buy: num(m.buy), sell: num(m.sell), manual: true, logo: m.logo || null, updatedAt: m.updatedAt });
 
-    return reply({ updatedAt: new Date().toISOString(), meta: { mode, types, total: items.length, fields: items[0] ? Object.keys(items[0].o) : [] }, providers });
+    // Tasa de conversión de Fiwind (USDT por 1 USD): dólar cripto de Fiwind (venta) ÷ USDT de Fiwind (venta)
+    let fiwind = null;
+    try {
+      const u = await usdtP;
+      const o1 = items.find(x => norm(x.id) === 'fiwindcripto')?.o;
+      const o2 = u && flatten(u).find(o => norm(pick(o, ['slug', 'id', 'key']) || '').startsWith('fiwind'));
+      const bid = o => o && num(pick(o, ['totalBid', 'bid', 'compra', 'buy']));
+      const usdBid = bid(o1), usdtBid = bid(o2);
+      const rate = usdBid && usdtBid ? usdBid / usdtBid : null;
+      if (rate && rate > 0.5 && rate < 1.5) fiwind = { rate, usdBid, usdtBid };
+    } catch {}
+
+    return reply({ updatedAt: new Date().toISOString(), fiwind, meta: { mode, types, total: items.length, fields: items[0] ? Object.keys(items[0].o) : [] }, providers });
   } catch (e) {
     return reply({ error: e.message }, 502);
   }

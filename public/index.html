@@ -57,6 +57,12 @@ summary{font-weight:700;cursor:pointer;padding:2px 0}
 td.ic,th.ic{width:1%;padding-right:0}
 .chk .ico{width:20px;height:20px}
 .nw{white-space:nowrap}
+.bdg{width:16px;height:16px;object-fit:contain;vertical-align:-3px;margin-left:5px}
+.pay{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px}
+.pi{width:18px;height:18px;border-radius:4px;object-fit:contain;background:var(--tile);flex:none}
+.pi.ph{display:inline-grid;place-items:center;color:var(--mute)}
+.pi svg{width:12px;height:12px}
+.pay .more{font-size:11.5px;color:var(--mute)}
 .vb{width:15px;height:15px;vertical-align:-2px;margin-left:5px}
 .arb{padding-bottom:12px;border-top-color:#8a6dd8}
 .arb .in{padding:0 14px}
@@ -88,8 +94,8 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
       <div class="seg" data-c="sell"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT P2P</button></div>
       <div class="box" id="b-sell"></div></section>
     <aside class="col arb"><h2>Arbitraje</h2>
-      <div class="in"><label class="sub" for="fw">USDT que recibís por 1 USD en Fiwind</label>
-        <input id="fw" inputmode="decimal" placeholder="Ej: 0,939" autocomplete="off">
+      <div class="in"><label class="sub" for="fw">USDT por 1 USD en Fiwind (opcional: pisa la automática)</label>
+        <input id="fw" inputmode="decimal" placeholder="Vacío = usar la automática" autocomplete="off">
         <div class="sub" id="fw-at"></div></div>
       <dl id="arb-out"></dl></aside>
   </div>
@@ -139,6 +145,31 @@ document.addEventListener('error', e => {
 }, true);
 const VB = '<svg class="vb" viewBox="0 0 24 24" role="img" aria-label="Comerciante verificado"><title>Comerciante verificado</title><circle cx="12" cy="12" r="11" fill="#f0b90b"/><path d="M7 12.5l3.2 3.2L17 8.8" fill="none" stroke="#1a1a1a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const fl = n => n == null ? '—' : '$' + n.toLocaleString('es-AR', {maximumFractionDigits: 0});
+// Medios de pago: se busca el logo por nombre; si no se reconoce, se muestra un ícono genérico de banco
+const BANK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></svg>';
+const PAY = [[/mercado ?pago/i, 'mercadopago.com.ar'], [/ual[aá]/i, 'uala.com.ar'], [/lemon/i, 'lemoncash.io'], [/belo/i, 'belo.app'],
+  [/brubank/i, 'brubank.com'], [/galicia/i, 'bancogalicia.com.ar'], [/naranja/i, 'naranjax.com'], [/personal ?pay/i, 'personalpay.com.ar'],
+  [/santander/i, 'santander.com.ar'], [/bbva|franc[eé]s/i, 'bbva.com.ar'], [/macro/i, 'macro.com.ar'], [/naci[oó]n|\bbna\b/i, 'bna.com.ar'],
+  [/provincia/i, 'bancoprovincia.com.ar'], [/ciudad/i, 'bancociudad.com.ar'], [/icbc/i, 'icbc.com.ar'], [/hsbc/i, 'hsbc.com.ar'],
+  [/prex/i, 'prexcard.com'], [/fiwind/i, 'fiwind.io'], [/cocos/i, 'cocos.capital'], [/astropay/i, 'astropay.com'], [/reba/i, 'reba.com.ar'],
+  [/paypal/i, 'paypal.com'], [/wise/i, 'wise.com'], [/skrill/i, 'skrill.com'], [/payoneer/i, 'payoneer.com'], [/takenos/i, 'takenos.com'],
+  [/supervielle/i, 'supervielle.com.ar'], [/hipotecario/i, 'hipotecario.com.ar'], [/credicoop/i, 'bancocredicoop.coop'], [/patagonia/i, 'bancopatagonia.com.ar']];
+const payIcon = n => { const d = PAY.find(([r]) => r.test(n));
+  return d ? `<img class="pi" src="${fav(d[1])}" alt="" title="${esc(n)}" loading="lazy" referrerpolicy="no-referrer">` : `<span class="pi ph" title="${esc(n)}">${BANK}</span>`; };
+const payRow = list => { const u = [...new Set(list)]; if (!u.length) return '';
+  return `<div class="pay">${u.slice(0, 6).map(payIcon).join('')}${u.length > 6 ? `<span class="more">+${u.length - 6}</span>` : ''}</div>`; };
+document.addEventListener('error', e => {
+  const t = e.target;
+  if (t.tagName === 'IMG' && t.classList.contains('pi')) { const x = document.createElement('span'); x.className = 'pi ph'; x.title = t.title; x.innerHTML = BANK; t.replaceWith(x); }
+}, true);
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+const badgeHtml = a => a.badges?.length
+  ? a.badges.slice(0, 2).map(b => `<img class="bdg" src="${esc((dark && b.urlDark) || b.url)}" alt="" title="${esc(b.title || 'Comerciante verificado')}" loading="lazy" referrerpolicy="no-referrer">`).join('')
+  : (a.verified ? VB : '');
+document.addEventListener('error', e => {
+  const t = e.target;
+  if (t.tagName === 'IMG' && t.classList.contains('bdg')) { const x = document.createElement('span'); x.innerHTML = VB; t.replaceWith(x.firstChild); }
+}, true);
 const wants = src => S.sub.buy === src || S.sub.sell === src;
 
 function ago(t) {
@@ -175,9 +206,9 @@ function renderCol(c) {
     box.innerHTML = warn + `<table><thead><tr><th class="ic"></th><th>Anunciante</th><th class="n">Precio</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
       d.ads.map((a, i) => `<tr class="${i === 0 ? 'best' : ''}">
         <td class="ic">${icon(EXM[a.ex]?.logo, EXM[a.ex]?.name)}</td>
-        <td>${esc(a.nick)}${a.verified ? VB : ''}
+        <td>${esc(a.nick)}${badgeHtml(a)}
           <div class="sub">${esc(EXM[a.ex]?.name || a.ex)}${a.orders != null ? ' · ' + a.orders + ' órdenes/mes' : ''}${a.rate != null ? ' · ' + a.rate.toFixed(0) + '%' : ''}</div>
-          ${a.methods.length ? `<div class="sub">${esc(a.methods.slice(0, 3).join(', '))}${a.methods.length > 3 ? ' +' + (a.methods.length - 3) : ''}</div>` : ''}</td>
+          ${payRow(a.methods)}</td>
         <td class="n price">${money(a.price)}</td>
         <td class="n">${a.available != null ? fmtN(a.available) + ' USDT' : '—'}<div class="sub nw">Mín ${fl(a.min)}</div><div class="sub nw">Máx ${fl(a.max)}</div></td></tr>`).join('') + '</tbody></table>';
   }
@@ -189,11 +220,12 @@ function renderArb() {
   const best = (S.rates?.providers || []).filter(p => !S.hidden.has(p.id) && !p.stale && p.buy != null).sort((a, b) => a.buy - b.buy)[0];
   const top = S.p2p.sell?.ads?.[0]; // la lista de venta está ordenada: el primero es el precio más alto
   if (!best || !top) return out.innerHTML = `<div class="sub">${!best ? 'Esperando precios del dólar oficial…' : 'Mostrá "USDT P2P" en la columna Venta para calcular.'}</div>`;
-  const be = best.buy / top.price, r = S.fw?.v;
+  const be = best.buy / top.price, auto = S.rates?.fiwind?.rate, r = S.fw?.v || auto;
   let res = '';
   if (r) {
     const g = r * top.price / best.buy - 1;
-    res = `<dt>Resultado con tu tasa</dt><dd class="res ${g >= 0 ? 'pos' : 'neg'}">${g >= 0 ? '+' : ''}${(g * 100).toFixed(2).replace('.', ',')}%</dd>
+    res = `<dt>Tasa usada · ${S.fw?.v ? 'manual' : 'automática'}</dt><dd>${rate4(r)} USDT por USD</dd>
+      <dt>Resultado</dt><dd class="res ${g >= 0 ? 'pos' : 'neg'}">${g >= 0 ? '+' : ''}${(g * 100).toFixed(2).replace('.', ',')}%</dd>
       <dd class="sub">≈ ${g >= 0 ? '+' : '−'}${fl(Math.abs(g) * best.buy * 1000)} por cada USD 1.000, sin comisiones</dd>`;
   }
   out.innerHTML = `<dt>Dólar oficial más barato</dt><dd>${esc(best.name)} · ${money(best.buy)}</dd>
@@ -201,8 +233,10 @@ function renderArb() {
     <dt>Para empatar necesitás al menos</dt><dd>${rate4(be)} USDT por USD</dd>${res}`;
 }
 function fwAt() {
-  const el = $('#fw-at'), t = S.fw?.at;
-  el.textContent = !t ? 'Sin cargar' : 'Cargado ' + ago(t) + (Date.now() - t > 600000 ? ' · revisá que siga vigente' : '');
+  const el = $('#fw-at'), t = S.fw?.at, auto = S.rates?.fiwind?.rate;
+  const a = auto ? `Automática: ${rate4(auto)} (datos de ${ago(S.at.rates)})` : '';
+  el.textContent = t ? 'Manual, cargada ' + ago(t) + (Date.now() - t > 600000 ? ' · revisá que siga vigente' : '') + (a ? ' · ' + a : '')
+    : a || 'Sin tasa: escribila a mano';
 }
 
 function renderStatus() {
