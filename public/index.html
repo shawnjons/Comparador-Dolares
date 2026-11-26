@@ -74,6 +74,11 @@ td.ic,th.ic{width:1%;padding-right:0}
 .arb{padding-bottom:12px;border-top-color:#8a6dd8}
 .arb .in{padding:0 14px}
 .arb input{width:100%;margin:6px 0 2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}
+.calc{width:100%;margin-top:4px;font-size:13px}
+.calc td{padding:3px 0;border-bottom:1px solid var(--line);vertical-align:baseline}
+.calc td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.calc tr.tot td{border-top:2px solid var(--line);font-size:14px}
 .arb dl{margin:10px 14px 0;font-size:13.5px}
 .arb dt{color:var(--mute);font-size:12.5px;margin-top:9px}
 .arb dd{margin:1px 0 0;font-weight:700;font-variant-numeric:tabular-nums}
@@ -101,8 +106,13 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
       <div class="seg" data-c="sell"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT P2P</button></div>
       <div class="box" id="b-sell"></div></section>
     <aside class="col arb"><h2>Arbitraje</h2>
-      <div class="in"><label class="sub" for="fw">USDT por 1 USD en Fiwind (opcional: pisa la automática)</label>
-        <input id="fw" inputmode="decimal" placeholder="Vacío = usar la automática" autocomplete="off">
+      <div class="in">
+        <div class="grid2">
+          <div><label class="sub" for="usd">Monto en USD</label><input id="usd" inputmode="decimal" placeholder="1000" autocomplete="off"></div>
+          <div><label class="sub" for="fw">USDT por 1.000 USD</label><input id="fw" inputmode="decimal" placeholder="Vacío = automática" autocomplete="off"></div>
+          <div><label class="sub" for="fee-w">Fee retiro (USDT)</label><input id="fee-w" inputmode="decimal" placeholder="0,50" autocomplete="off"></div>
+          <div><label class="sub" for="fee-p">Fee venta P2P (USDT)</label><input id="fee-p" inputmode="decimal" placeholder="0,07" autocomplete="off"></div>
+        </div>
         <div class="sub" id="fw-at"></div></div>
       <dl id="arb-out"></dl></aside>
   </div>
@@ -137,7 +147,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 const S = {sub: {buy: 'oficial', sell: 'oficial'}, hidden: new Set(LS.get('hidden', [])), exOff: new Set(LS.get('exOff', [])), ver: !!LS.get('ver', false),
-  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '', gen: 0, fw: LS.get('fw', null), sel: {buy: null, sell: null},
+  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '', gen: 0, fw: LS.get('fw', null), usd: LS.get('usd', 1000), fee: LS.get('fee', {w: 0.5, p: 0.07}), sel: {buy: null, sell: null},
   ev: {rates: LS.get('evRates', 300), p2p: LS.get('evP2P', 30)}};
 const fav = d => `https://www.google.com/s2/favicons?domain=${d}&sz=64`;
 const EX = [{id: 'binance', name: 'Binance', logo: fav('binance.com')}, {id: 'okx', name: 'OKX', logo: fav('okx.com')}, {id: 'bybit', name: 'Bybit', logo: fav('bybit.com')}];
@@ -225,6 +235,9 @@ function renderCol(c) {
   }
 }
 const renderAll = () => { renderCol('buy'); renderCol('sell'); renderArb(); };
+if (S.fw?.v && S.fw.v < 10) S.fw.v *= 1000; // versiones anteriores guardaban la tasa por 1 USD (0,9416): ahora es por 1.000 USD
+const fmt2 = n => n.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const pn = v => parseFloat(String(v).replace(',', '.'));
 const rate4 = n => n.toLocaleString('es-AR', {minimumFractionDigits: 4, maximumFractionDigits: 4});
 function renderArb() {
   const out = $('#arb-out');
@@ -236,13 +249,26 @@ function renderArb() {
   const buy = selB || bestB, top = selS || bestS;
   if (!buy || !top) return out.innerHTML = `<div class="sub">${!buy ? 'Esperando precios del dólar oficial…' : 'Mostrá "USDT P2P" en la columna Venta para calcular.'}</div>`;
   const lost = (S.sel.buy && !selB && 'compra') || (S.sel.sell && !selS && 'venta');
-  const be = buy.buy / top.price, auto = S.rates?.fiwind?.rate, r = S.fw?.v || auto;
+  const usd = S.usd > 0 ? S.usd : 1000, fW = S.fee.w || 0, fP = S.fee.p || 0;
+  const auto = S.rates?.fiwind?.rate, p1k = S.fw?.v || (auto ? auto * 1000 : null);
+  const be = ((usd * buy.buy / top.price) + fW + fP) / usd * 1000; // USDT por 1.000 USD para quedar en cero, con fees
   let res = '';
-  if (r) {
-    const g = r * top.price / buy.buy - 1;
-    res = `<dt>Tasa usada · ${S.fw?.v ? 'manual' : 'automática'}</dt><dd>${rate4(r)} USDT por USD</dd>
-      <dt>Resultado</dt><dd class="res ${g >= 0 ? 'pos' : 'neg'}">${g >= 0 ? '+' : ''}${(g * 100).toFixed(2).replace('.', ',')}%</dd>
-      <dd class="sub">≈ ${g >= 0 ? '+' : '−'}${fl(Math.abs(g) * buy.buy * 1000)} por cada USD 1.000, sin comisiones</dd>`;
+  if (p1k) {
+    const usdt = usd * p1k / 1000, net = usdt - fW - fP, cost = usd * buy.buy, sale = net * top.price, gain = sale - cost, g = gain / cost;
+    const sg = gain >= 0 ? '+' : '−', cls = gain >= 0 ? 'pos' : 'neg';
+    res = `<dd><table class="calc"><tbody>
+      <tr><td>Compra ARS/USD</td><td>${money(buy.buy)}</td></tr>
+      <tr><td>Pesos invertidos (USD ${fmtN(usd)})</td><td>${money(cost)}</td></tr>
+      <tr><td>Venta vs compra</td><td>${top.price / buy.buy - 1 >= 0 ? '+' : '−'}${fmt2(Math.abs(top.price / buy.buy - 1) * 100)}%</td></tr>
+      <tr><td>USDT recibidos<div class="sub">${fmt2(p1k)} por 1.000 · ${S.fw?.v ? 'manual' : 'automática'}</div></td><td>${fmt2(usdt)}</td></tr>
+      <tr><td>Comisión de conversión</td><td>${fmt2((1000 / p1k - 1) * 100)}% · ${(1000 / p1k).toLocaleString('es-AR', {minimumFractionDigits: 5, maximumFractionDigits: 5})}</td></tr>
+      <tr><td>Fee retiro</td><td>−${fmt2(fW)}</td></tr>
+      <tr><td>Fee venta P2P</td><td>−${fmt2(fP)}</td></tr>
+      <tr><td>USDT final</td><td>${fmt2(net)}</td></tr>
+      <tr><td>Venta ARS/USDT</td><td>${money(top.price)}</td></tr>
+      <tr><td>Pesos recibidos</td><td>${money(sale)}</td></tr>
+      <tr class="tot"><td>Ganancia</td><td class="${cls}">${sg}${money(Math.abs(gain))} · ${sg}${fmt2(Math.abs(g) * 100)}%</td></tr>
+      </tbody></table></dd>`;
   }
   const fa = S.rates?.fiwind?.at ? Date.parse(S.rates.fiwind.at) : null;
   if (res && !S.fw?.v && fa && Date.now() - fa > 1800000) res += `<dd class="sub neg">El precio de Fiwind en ComparaDólar no cambia desde ${ago(fa)}: confirmá la tasa en la app.</dd>`;
@@ -251,12 +277,12 @@ function renderArb() {
   const reset = S.sel.buy || S.sel.sell ? `<dd><button class="lnk" id="arb-reset">Volver a los mejores precios</button></dd>` : `<dd class="sub">Tocá una fila de Compra (dólar oficial) y una de Venta (USDT P2P) para elegirlas.</dd>`;
   out.innerHTML = `<dt>Compra de dólar oficial <span class="tag">${tagB}</span></dt><dd>${esc(buy.name)} · ${money(buy.buy)}${buy.stale ? ' <span class="chip">Desactualizado</span>' : ''}</dd>
     <dt>Venta de USDT <span class="tag">${tagS}</span></dt><dd>${esc(top.nick)} · ${esc(EXM[top.ex]?.name || top.ex)} · ${money(top.price)}</dd>
-    <dt>Para empatar necesitás al menos</dt><dd>${rate4(be)} USDT por USD</dd>${res}${note}${reset}`;
+    <dt>Para empatar necesitás al menos</dt><dd>${fmt2(be)} USDT por cada 1.000 USD</dd>${res}${note}${reset}`;
 }
 function fwAt() {
   const el = $('#fw-at'), t = S.fw?.at, auto = S.rates?.fiwind?.rate;
   const fa = S.rates?.fiwind?.at ? Date.parse(S.rates.fiwind.at) : null;
-  const a = auto ? `Automática: ${rate4(auto)}${fa ? ' · precio de Fiwind: ' + ago(fa) : ''}` : '';
+  const a = auto ? `Automática: ${fmt2(auto * 1000)}${fa ? ' · precio de Fiwind: ' + ago(fa) : ''}` : '';
   el.textContent = t ? 'Manual, cargada ' + ago(t) + (Date.now() - t > 600000 ? ' · revisá que siga vigente' : '') + (a ? ' · ' + a : '')
     : a || 'Sin tasa: escribila a mano';
 }
@@ -342,10 +368,15 @@ $('#exlist').addEventListener('change', e => {
 });
 $('#ver').checked = S.ver;
 if (S.fw?.v) $('#fw').value = String(S.fw.v).replace('.', ',');
+if (S.usd != null) $('#usd').value = String(S.usd).replace('.', ',');
+$('#fee-w').value = String(S.fee.w ?? 0.5).replace('.', ','); $('#fee-p').value = String(S.fee.p ?? 0.07).replace('.', ',');
 $('#fw').addEventListener('input', e => {
-  const v = parseFloat(e.target.value.replace(',', '.'));
+  let v = pn(e.target.value); if (v > 0 && v < 10) v *= 1000; // si escriben 0,9416 se interpreta como tasa por 1 USD
   S.fw = v > 0 ? {v, at: Date.now()} : null; LS.set('fw', S.fw); renderArb(); fwAt();
 });
+$('#usd').addEventListener('input', e => { const v = pn(e.target.value); S.usd = v > 0 ? v : null; LS.set('usd', S.usd); renderArb(); });
+for (const [id, k] of [['#fee-w', 'w'], ['#fee-p', 'p']])
+  $(id).addEventListener('input', e => { const v = pn(e.target.value); S.fee[k] = v >= 0 ? v : 0; LS.set('fee', S.fee); renderArb(); });
 $('#ver').addEventListener('change', e => {
   S.ver = e.target.checked; LS.set('ver', S.ver); S.gen++; S.p2p = {buy: null, sell: null}; renderAll(); loadP2P('buy'); loadP2P('sell');
 });
