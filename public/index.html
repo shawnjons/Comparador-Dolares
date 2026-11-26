@@ -51,6 +51,11 @@ summary{font-weight:700;cursor:pointer;padding:2px 0}
 .acts{display:flex;gap:8px;margin:10px 0}
 .chk{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer}
 .fld{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0}
+.ico{width:24px;height:24px;border-radius:6px;object-fit:contain;background:#fff;vertical-align:middle;flex:none}
+.ico.ph{display:inline-grid;place-items:center;background:var(--line);color:var(--mute);font-weight:700;font-size:12px}
+td.ic,th.ic{width:1%;padding-right:0}
+.chk .ico{width:20px;height:20px}
+.warn{padding:8px 14px;font-size:12.5px;color:#c0392b;border-top:1px solid var(--line)}
 select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
 select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 </style>
@@ -66,10 +71,10 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 
   <div class="cols">
     <section class="col buy"><h2>Compra</h2>
-      <div class="seg" data-c="buy"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT Binance</button></div>
+      <div class="seg" data-c="buy"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT P2P</button></div>
       <div class="box" id="b-buy"></div></section>
     <section class="col sell"><h2>Venta</h2>
-      <div class="seg" data-c="sell"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT Binance</button></div>
+      <div class="seg" data-c="sell"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT P2P</button></div>
       <div class="box" id="b-sell"></div></section>
   </div>
 
@@ -78,11 +83,12 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
     <details open><summary>Dólar oficial · proveedores</summary>
       <div class="acts"><button id="all">Todos</button><button id="none">Ninguno</button></div>
       <div id="plist" class="sub">Cargando…</div></details>
-    <details><summary>USDT en Binance</summary>
-      <label class="chk"><input type="checkbox" id="ver"> Solo anunciantes verificados</label></details>
+    <details><summary>USDT P2P</summary>
+      <div class="sub" style="margin-top:8px">Exchanges</div><div id="exlist"></div>
+      <label class="chk" style="margin-top:6px"><input type="checkbox" id="ver"> Solo anunciantes verificados</label></details>
     <details><summary>Actualización automática</summary>
       <label class="fld">Dólar oficial <select id="ev-rates"></select></label>
-      <label class="fld">USDT Binance <select id="ev-p2p"></select></label>
+      <label class="fld">USDT P2P <select id="ev-p2p"></select></label>
       <p class="sub">Al abrir o recargar la página siempre se actualiza una vez. Si la pestaña está en segundo plano, no consulta nada.</p></details>
   </aside>
 
@@ -101,9 +107,20 @@ const LS = {
   get(k, d) { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
-const S = {sub: {buy: 'oficial', sell: 'oficial'}, hidden: new Set(LS.get('hidden', [])), ver: !!LS.get('ver', false),
-  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '',
+const S = {sub: {buy: 'oficial', sell: 'oficial'}, hidden: new Set(LS.get('hidden', [])), exOff: new Set(LS.get('exOff', [])), ver: !!LS.get('ver', false),
+  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '', gen: 0,
   ev: {rates: LS.get('evRates', 300), p2p: LS.get('evP2P', 30)}};
+const fav = d => `https://www.google.com/s2/favicons?domain=${d}&sz=64`;
+const EX = [{id: 'binance', name: 'Binance', logo: fav('binance.com')}, {id: 'okx', name: 'OKX', logo: fav('okx.com')}, {id: 'bybit', name: 'Bybit', logo: fav('bybit.com')}];
+const EXM = Object.fromEntries(EX.map(e => [e.id, e]));
+const icon = (src, name) => src
+  ? `<img class="ico" src="${esc(src)}" alt="" data-n="${esc(name)}" loading="lazy" referrerpolicy="no-referrer">`
+  : `<span class="ico ph">${esc(String(name || '?')[0])}</span>`;
+// si un logo no carga, se reemplaza por la inicial
+document.addEventListener('error', e => {
+  const t = e.target;
+  if (t.tagName === 'IMG' && t.classList.contains('ico')) { const s = document.createElement('span'); s.className = 'ico ph'; s.textContent = (t.dataset.n || '?')[0]; t.replaceWith(s); }
+}, true);
 const wants = src => S.sub.buy === src || S.sub.sell === src;
 
 function ago(t) {
@@ -125,22 +142,27 @@ function renderCol(c) {
     const rows = priced.filter(p => !p.stale).sort(by).concat(priced.filter(p => p.stale).sort(by)); // los desactualizados van al final
     const all = rows.concat(list.filter(p => p[c] == null));
     if (!all.length) return box.innerHTML = msg('No hay proveedores seleccionados. Elegí alguno en Filtros.');
-    box.innerHTML = `<table><thead><tr><th>Proveedor</th><th class="n">${c === 'buy' ? 'Comprás a' : 'Vendés a'}</th></tr></thead><tbody>` +
+    box.innerHTML = `<table><thead><tr><th class="ic"></th><th>Proveedor</th><th class="n">${c === 'buy' ? 'Comprás a' : 'Vendés a'}</th></tr></thead><tbody>` +
       all.map((p, i) => `<tr class="${i === 0 && p[c] != null && !p.stale ? 'best' : ''}">
-        <td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}${p.stale ? '<span class="chip">Desactualizado</span>' : ''}
+        <td class="ic">${icon(p.logo, p.name)}</td><td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}${p.stale ? '<span class="chip">Desactualizado</span>' : ''}
           ${p.manual ? `<div class="sub">${p.updatedAt ? 'Cargado ' + manualAgo(p.updatedAt) : 'Sin cotización cargada'}</div>` : ''}${p.conditions ? `<div class="sub">${esc(p.conditions)}</div>` : ''}${p.stale && p.updatedAt ? `<div class="sub">Último dato ${manualAgo(p.updatedAt)}</div>` : ''}</td>
         <td class="n price">${money(p[c])}</td></tr>`).join('') + '</tbody></table>';
   } else {
     const d = S.p2p[c];
     if (!d) return box.innerHTML = msg(S.err[c] ? 'No se pudo cargar: ' + esc(S.err[c]) : 'Cargando…');
-    if (!d.ads.length) return box.innerHTML = msg('Sin anuncios con estos filtros.');
-    box.innerHTML = `<table><thead><tr><th>Anunciante</th><th class="n">Precio</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
+    if (d.none) return box.innerHTML = msg('No hay exchanges seleccionados. Elegí alguno en Filtros.');
+    const errs = Object.entries(d.errors || {}).map(([k, v]) => `${EXM[k]?.name || k} (${v})`);
+    const warn = errs.length ? `<div class="warn">No se pudo leer: ${esc(errs.join(' · '))}</div>` : '';
+    if (!d.ads.length) return box.innerHTML = warn + msg('Sin anuncios con estos filtros.');
+    const lim = a => isFinite(a.min) && isFinite(a.max) && a.min != null && a.max != null ? `$${a.min.toLocaleString('es-AR')} – $${a.max.toLocaleString('es-AR')}` : '';
+    box.innerHTML = warn + `<table><thead><tr><th class="ic"></th><th>Anunciante</th><th class="n">Precio</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
       d.ads.map((a, i) => `<tr class="${i === 0 ? 'best' : ''}">
+        <td class="ic">${icon(EXM[a.ex]?.logo, EXM[a.ex]?.name)}</td>
         <td>${esc(a.nick)}${a.verified ? '<span class="chip">Verificado</span>' : ''}
-          <div class="sub">${a.orders ?? '—'} órdenes/mes · ${a.rate != null ? a.rate.toFixed(0) + '%' : '—'}</div>
-          <div class="sub">${esc(a.methods.slice(0, 3).join(', '))}${a.methods.length > 3 ? ' +' + (a.methods.length - 3) : ''}</div></td>
+          <div class="sub">${esc(EXM[a.ex]?.name || a.ex)}${a.orders != null ? ' · ' + a.orders + ' órdenes/mes' : ''}${a.rate != null ? ' · ' + a.rate.toFixed(0) + '%' : ''}</div>
+          ${a.methods.length ? `<div class="sub">${esc(a.methods.slice(0, 3).join(', '))}${a.methods.length > 3 ? ' +' + (a.methods.length - 3) : ''}</div>` : ''}</td>
         <td class="n price">${money(a.price)}</td>
-        <td class="n">${fmtN(a.available)} USDT<div class="sub">$${a.min.toLocaleString('es-AR')} – $${a.max.toLocaleString('es-AR')}</div></td></tr>`).join('') + '</tbody></table>';
+        <td class="n">${a.available != null ? fmtN(a.available) + ' USDT' : '—'}<div class="sub">${lim(a)}</div></td></tr>`).join('') + '</tbody></table>';
   }
 }
 const renderAll = () => { renderCol('buy'); renderCol('sell'); };
@@ -168,10 +190,16 @@ async function loadRates() {
 async function loadP2P(c) {
   if (document.hidden || S.sub[c] !== 'p2p' || S.busy[c]) return;
   S.busy[c] = true;
-  const q = '?type=' + (c === 'buy' ? 'BUY' : 'SELL') + (S.ver ? '&merchant=1' : '');
-  try { S.p2p[c] = await get('/api/p2p' + q); S.at[c] = Date.now(); S.err[c] = null; }
-  catch (e) { S.err[c] = e.message; }
-  S.busy[c] = false; renderCol(c); renderStatus();
+  const on = EX.filter(e => !S.exOff.has(e.id)).map(e => e.id);
+  if (!on.length) { S.p2p[c] = {ads: [], errors: {}, none: true}; S.err[c] = null; S.busy[c] = false; renderCol(c); return; }
+  const q = '?type=' + (c === 'buy' ? 'BUY' : 'SELL') + '&ex=' + on.join(',') + (S.ver ? '&merchant=1' : '');
+  const g = S.gen;
+  let res, er = null;
+  try { res = await get('/api/p2p' + q); } catch (e) { er = e.message; }
+  S.busy[c] = false;
+  if (g !== S.gen) return loadP2P(c); // los filtros cambiaron mientras tanto: se descarta y se vuelve a pedir
+  if (er) S.err[c] = er; else { S.p2p[c] = res; S.at[c] = Date.now(); S.err[c] = null; }
+  renderCol(c); renderStatus();
 }
 const loadNow = () => { loadRates(); loadP2P('buy'); loadP2P('sell'); };
 const ensure = () => { if (!S.rates) loadRates(); ['buy', 'sell'].forEach(c => { if (!S.p2p[c]) loadP2P(c); }); };
@@ -188,7 +216,7 @@ document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e
 function buildList() {
   const ps = S.rates.providers, sig = ps.map(p => p.id).join('|');
   if (sig === S.sig) return; S.sig = sig;
-  $('#plist').innerHTML = ps.map(p => `<label class="chk"><input type="checkbox" data-id="${esc(p.id)}" ${S.hidden.has(p.id) ? '' : 'checked'}> ${esc(p.name)}${p.manual ? '<span class="chip">Manual</span>' : ''}</label>`).join('');
+  $('#plist').innerHTML = ps.map(p => `<label class="chk"><input type="checkbox" data-id="${esc(p.id)}" ${S.hidden.has(p.id) ? '' : 'checked'}> ${icon(p.logo, p.name)} ${esc(p.name)}${p.manual ? '<span class="chip">Manual</span>' : ''}</label>`).join('');
 }
 $('#plist').addEventListener('change', e => {
   const id = e.target.dataset.id; if (!id) return;
@@ -201,9 +229,15 @@ const setAll = on => {
 };
 $('#all').onclick = () => setAll(true);
 $('#none').onclick = () => setAll(false);
+$('#exlist').innerHTML = EX.map(e => `<label class="chk"><input type="checkbox" data-ex="${e.id}" ${S.exOff.has(e.id) ? '' : 'checked'}> ${icon(e.logo, e.name)} ${e.name}</label>`).join('');
+$('#exlist').addEventListener('change', e => {
+  const id = e.target.dataset.ex; if (!id) return;
+  e.target.checked ? S.exOff.delete(id) : S.exOff.add(id);
+  LS.set('exOff', [...S.exOff]); S.gen++; S.p2p = {buy: null, sell: null}; renderAll(); loadP2P('buy'); loadP2P('sell');
+});
 $('#ver').checked = S.ver;
 $('#ver').addEventListener('change', e => {
-  S.ver = e.target.checked; LS.set('ver', S.ver); S.p2p = {buy: null, sell: null}; renderAll(); loadP2P('buy'); loadP2P('sell');
+  S.ver = e.target.checked; LS.set('ver', S.ver); S.gen++; S.p2p = {buy: null, sell: null}; renderAll(); loadP2P('buy'); loadP2P('sell');
 });
 const togglePanel = open => { $('#panel').hidden = !open; $('#fbtn').setAttribute('aria-expanded', open); if (open) $('#fclose').focus(); else $('#fbtn').focus(); };
 $('#fbtn').onclick = () => togglePanel($('#panel').hidden);

@@ -52,13 +52,13 @@ exports.handler = async (event) => {
         buy: num(pick(o, ['totalAsk', 'ask', 'venta', 'sell', 'price'])),   // lo que pagás para comprar USD
         sell: num(pick(o, ['totalBid', 'bid', 'compra', 'buy'])),           // lo que te pagan al vender USD
         h24: !!pick(o, ['is24x7', 'h24', 'always']),
+        logo: o.logoUrl || null,
         stale: !!o.stale,                       // dato viejo: ComparaDólar lo marca como desactualizado
         conditions: o.conditions || null,       // ej. "Solo para clientes Ultra"
         updatedAt: pick(o, ['lastSeenAt', 'updatedAt', 'time', 'timestamp', 'fecha']) || null
       });
     }
-    for (const m of cfg.manual || []) providers.push({ id: 'manual-' + norm(m.name), name: m.name, buy: num(m.buy), sell: num(m.sell), manual: true, updatedAt: m.updatedAt });
-    for (const p of providers) p.spread = p.buy && p.sell ? ((p.buy - p.sell) / p.buy) * 100 : null;
+    for (const m of cfg.manual || []) providers.push({ id: 'manual-' + norm(m.name), name: m.name, buy: num(m.buy), sell: num(m.sell), manual: true, logo: m.logo || null, updatedAt: m.updatedAt });
 
     return reply({ updatedAt: new Date().toISOString(), meta: { mode, types, total: items.length, fields: items[0] ? Object.keys(items[0].o) : [] }, providers });
   } catch (e) {
