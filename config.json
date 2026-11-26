@@ -5,16 +5,24 @@
     "banco-provincia",
     "balanz",
     "uala",
-    "cocos-bank",
-    "brubank-ultra"
+    "cocos-bank"
   ],
   "names": {},
   "manual": [
+    {
+      "name": "Brubank",
+      "buy": null,
+      "sell": null,
+      "updatedAt": null
+    },
     {
       "name": "Naranja X",
       "buy": null,
       "sell": null,
       "updatedAt": null
     }
+  ],
+  "excluir": [
+    "brubank-ultra"
   ]
 }

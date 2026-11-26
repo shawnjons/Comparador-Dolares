@@ -50,6 +50,9 @@ exports.handler = async (event) => {
     if (oficiales.length) { chosen = oficiales; mode = 'tipo'; }
     else { const want = cfg.respaldo.map(norm); chosen = items.filter(x => want.includes(norm(x.id))); mode = 'respaldo'; }
 
+    const skip = new Set((cfg.excluir || []).map(norm)); // proveedores que no se quieren mostrar (ej. variantes para clientes premium)
+    chosen = chosen.filter(x => !skip.has(norm(x.id)));
+
     const seen = new Set(), providers = [];
     for (const { o, id } of chosen) {
       if (seen.has(id)) continue; seen.add(id);
