@@ -163,9 +163,12 @@ document.addEventListener('error', e => {
   if (t.tagName === 'IMG' && t.classList.contains('pi')) { const x = document.createElement('span'); x.className = 'pi ph'; x.title = t.title; x.innerHTML = BANK; t.replaceWith(x); }
 }, true);
 const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+const TIER = {bronze: ['#b87333', 'Bronce'], silver: ['#aab4be', 'Plata'], gold: ['#f0b90b', 'Oro']};
+const tierSvg = t => `<svg class="vb" viewBox="0 0 24 24" role="img" aria-label="Comerciante ${TIER[t][1]}"><title>Comerciante nivel ${TIER[t][1]}</title><circle cx="12" cy="12" r="11" fill="${TIER[t][0]}"/><path d="M12 5.5l1.9 4.2 4.6.5-3.4 3.1 1 4.5-4.1-2.3-4.1 2.3 1-4.5-3.4-3.1 4.6-.5z" fill="#fff" fill-opacity=".92"/></svg>`;
+// Verificado con nivel/insignia: solo la insignia. Verificado sin nivel: el tilde amarillo. No verificado: nada.
 const badgeHtml = a => a.badges?.length
   ? a.badges.slice(0, 2).map(b => `<img class="bdg" src="${esc((dark && b.urlDark) || b.url)}" alt="" title="${esc(b.title || 'Comerciante verificado')}" loading="lazy" referrerpolicy="no-referrer">`).join('')
-  : (a.verified ? VB : '');
+  : a.tier && TIER[a.tier] ? tierSvg(a.tier) : (a.verified ? VB : '');
 document.addEventListener('error', e => {
   const t = e.target;
   if (t.tagName === 'IMG' && t.classList.contains('bdg')) { const x = document.createElement('span'); x.innerHTML = VB; t.replaceWith(x.firstChild); }
@@ -228,13 +231,16 @@ function renderArb() {
       <dt>Resultado</dt><dd class="res ${g >= 0 ? 'pos' : 'neg'}">${g >= 0 ? '+' : ''}${(g * 100).toFixed(2).replace('.', ',')}%</dd>
       <dd class="sub">≈ ${g >= 0 ? '+' : '−'}${fl(Math.abs(g) * best.buy * 1000)} por cada USD 1.000, sin comisiones</dd>`;
   }
+  const fa = S.rates?.fiwind?.at ? Date.parse(S.rates.fiwind.at) : null;
+  if (res && !S.fw?.v && fa && Date.now() - fa > 1800000) res += `<dd class="sub neg">El precio de Fiwind en ComparaDólar no cambia desde ${ago(fa)}: confirmá la tasa en la app.</dd>`;
   out.innerHTML = `<dt>Dólar oficial más barato</dt><dd>${esc(best.name)} · ${money(best.buy)}</dd>
     <dt>Mejor precio para vender USDT</dt><dd>${esc(EXM[top.ex]?.name || top.ex)} · ${money(top.price)}</dd>
     <dt>Para empatar necesitás al menos</dt><dd>${rate4(be)} USDT por USD</dd>${res}`;
 }
 function fwAt() {
   const el = $('#fw-at'), t = S.fw?.at, auto = S.rates?.fiwind?.rate;
-  const a = auto ? `Automática: ${rate4(auto)} (datos de ${ago(S.at.rates)})` : '';
+  const fa = S.rates?.fiwind?.at ? Date.parse(S.rates.fiwind.at) : null;
+  const a = auto ? `Automática: ${rate4(auto)}${fa ? ' · precio de Fiwind: ' + ago(fa) : ''}` : '';
   el.textContent = t ? 'Manual, cargada ' + ago(t) + (Date.now() - t > 600000 ? ' · revisá que siga vigente' : '') + (a ? ' · ' + a : '')
     : a || 'Sin tasa: escribila a mano';
 }

@@ -77,7 +77,7 @@ exports.handler = async (event) => {
       const bid = o => o && num(pick(o, ['totalBid', 'bid', 'compra', 'buy']));
       const usdBid = bid(o1), usdtBid = bid(o2);
       const rate = usdBid && usdtBid ? usdBid / usdtBid : null;
-      if (rate && rate > 0.5 && rate < 1.5) fiwind = { rate, usdBid, usdtBid };
+      if (rate && rate > 0.5 && rate < 1.5) fiwind = { rate, usdBid, usdtBid, at: pick(o2, ['time', 'lastSeenAt', 'updatedAt']) || null };
     } catch {}
 
     return reply({ updatedAt: new Date().toISOString(), fiwind, meta: { mode, types, total: items.length, fields: items[0] ? Object.keys(items[0].o) : [] }, providers });
