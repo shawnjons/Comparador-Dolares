@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-:root{--tile:#e9edf1;--bg:#f2f4f6;--card:#fff;--ink:#14202b;--mute:#667585;--line:#dde3e9;--acc:#0b6bcb;--sell:#b4540a;--best:#e7f5ee}
-@media (prefers-color-scheme:dark){:root{--tile:#2a3947;--bg:#10161c;--card:#18212a;--ink:#e8eef3;--mute:#8d9cab;--line:#2a3743;--acc:#5aa8f5;--sell:#f0a15c;--best:#15332a}}
+:root{--tile:#e9edf1;--bg:#f2f4f6;--card:#fff;--ink:#14202b;--mute:#667585;--line:#dde3e9;--acc:#0b6bcb;--sell:#b4540a;--best:#e7f5ee;--selbg:#ece6fb}
+@media (prefers-color-scheme:dark){:root{--tile:#2a3947;--bg:#10161c;--card:#18212a;--ink:#e8eef3;--mute:#8d9cab;--line:#2a3743;--acc:#5aa8f5;--sell:#f0a15c;--best:#15332a;--selbg:#2a2447}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif}
 main{max-width:1380px;margin:0 auto;padding:20px 16px 48px}
@@ -38,6 +38,13 @@ td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
 .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.best td{background:var(--best)}
+tr.pick{cursor:pointer}
+tr.pick:hover td{background:var(--tile)}
+tr.pick:focus-visible{outline:2px solid #8a6dd8;outline-offset:-2px}
+tr.sel td,tr.sel:hover td{background:var(--selbg)}
+tr.sel td:first-child{box-shadow:inset 3px 0 0 #8a6dd8}
+.tag{font-size:11px;font-weight:600;color:#8a6dd8;margin-left:4px}
+.lnk{border:0;background:none;color:var(--acc);font:inherit;font-size:12.5px;padding:0;cursor:pointer;text-decoration:underline}
 .price{font-weight:800;font-size:16px}
 .chip{font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-left:6px;color:var(--mute);white-space:nowrap}
 .sub{color:var(--mute);font-size:12.5px}
@@ -45,8 +52,8 @@ tr.best td{background:var(--best)}
 .foot{margin-top:18px;color:var(--mute);font-size:12.5px}
 #panel{position:fixed;top:0;right:0;bottom:0;width:min(340px,100vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.12);padding:16px;overflow-y:auto;z-index:5}
 #panel[hidden]{display:none}
-.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:18px}
-.ph button,.acts button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer}
+.pnh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:18px}
+.pnh button,.acts button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer}
 details{border-top:1px solid var(--line);padding:10px 0}
 summary{font-weight:700;cursor:pointer;padding:2px 0}
 .acts{display:flex;gap:8px;margin:10px 0}
@@ -58,10 +65,10 @@ td.ic,th.ic{width:1%;padding-right:0}
 .chk .ico{width:20px;height:20px}
 .nw{white-space:nowrap}
 .bdg{width:16px;height:16px;object-fit:contain;vertical-align:-3px;margin-left:5px}
-.pay{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px}
-.pi{width:18px;height:18px;border-radius:4px;object-fit:contain;background:var(--tile);flex:none}
-.pi.ph{display:inline-grid;place-items:center;color:var(--mute)}
-.pi svg{width:12px;height:12px}
+.pay{display:flex;flex-wrap:wrap;gap:3px;align-items:center;justify-content:flex-end;margin:5px 0 0 auto;max-width:120px}
+.pi{width:15px;height:15px;border-radius:3px;object-fit:contain;background:var(--tile);flex:none}
+.pi.ph{display:inline-flex;align-items:center;justify-content:center;color:var(--mute);line-height:0}
+.pi svg{display:block;width:11px;height:11px}
 .pay .more{font-size:11.5px;color:var(--mute)}
 .vb{width:15px;height:15px;vertical-align:-2px;margin-left:5px}
 .arb{padding-bottom:12px;border-top-color:#8a6dd8}
@@ -101,7 +108,7 @@ select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
   </div>
 
   <aside id="panel" hidden aria-label="Filtros">
-    <div class="ph"><strong>Filtros</strong><button id="fclose" aria-label="Cerrar filtros">Cerrar</button></div>
+    <div class="pnh"><strong>Filtros</strong><button id="fclose" aria-label="Cerrar filtros">Cerrar</button></div>
     <details open><summary>Dólar oficial · proveedores</summary>
       <div class="acts"><button id="all">Todos</button><button id="none">Ninguno</button></div>
       <div id="plist" class="sub">Cargando…</div></details>
@@ -130,7 +137,7 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
 const S = {sub: {buy: 'oficial', sell: 'oficial'}, hidden: new Set(LS.get('hidden', [])), exOff: new Set(LS.get('exOff', [])), ver: !!LS.get('ver', false),
-  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '', gen: 0, fw: LS.get('fw', null),
+  rates: null, p2p: {buy: null, sell: null}, at: {}, err: {}, busy: {}, sig: '', gen: 0, fw: LS.get('fw', null), sel: {buy: null, sell: null},
   ev: {rates: LS.get('evRates', 300), p2p: LS.get('evP2P', 30)}};
 const fav = d => `https://www.google.com/s2/favicons?domain=${d}&sz=64`;
 const EX = [{id: 'binance', name: 'Binance', logo: fav('binance.com')}, {id: 'okx', name: 'OKX', logo: fav('okx.com')}, {id: 'bybit', name: 'Bybit', logo: fav('bybit.com')}];
@@ -195,10 +202,11 @@ function renderCol(c) {
     const all = rows.concat(list.filter(p => p[c] == null));
     if (!all.length) return box.innerHTML = msg('No hay proveedores seleccionados. Elegí alguno en Filtros.');
     box.innerHTML = `<table><thead><tr><th class="ic"></th><th>Proveedor</th><th class="n">${c === 'buy' ? 'Comprás a' : 'Vendés a'}</th></tr></thead><tbody>` +
-      all.map((p, i) => `<tr class="${i === 0 && p[c] != null && !p.stale ? 'best' : ''}">
+      all.map((p, i) => { const pk = c === 'buy' && p.buy != null;
+      return `<tr class="${i === 0 && p[c] != null && !p.stale ? 'best' : ''}${pk ? ' pick' : ''}${pk && S.sel.buy === p.id ? ' sel' : ''}"${pk ? ` data-k="${esc(p.id)}" tabindex="0" title="Usar en Arbitraje"` : ''}>
         <td class="ic">${icon(p.logo, p.name)}</td><td>${esc(p.name)}${p.h24 ? '<span class="chip">24/7</span>' : ''}${p.manual ? '<span class="chip">Carga manual</span>' : ''}${p.stale ? '<span class="chip">Desactualizado</span>' : ''}
           ${p.manual ? `<div class="sub">${p.updatedAt ? 'Cargado ' + manualAgo(p.updatedAt) : 'Sin cotización cargada'}</div>` : ''}${p.conditions ? `<div class="sub">${esc(p.conditions)}</div>` : ''}${p.stale && p.updatedAt ? `<div class="sub">Último dato ${manualAgo(p.updatedAt)}</div>` : ''}</td>
-        <td class="n price">${money(p[c])}</td></tr>`).join('') + '</tbody></table>';
+        <td class="n price">${money(p[c])}</td></tr>`; }).join('') + '</tbody></table>';
   } else {
     const d = S.p2p[c];
     if (!d) return box.innerHTML = msg(S.err[c] ? 'No se pudo cargar: ' + esc(S.err[c]) : 'Cargando…');
@@ -207,35 +215,43 @@ function renderCol(c) {
     const warn = errs.length ? `<div class="warn">No se pudo leer: ${esc(errs.join(' · '))}</div>` : '';
     if (!d.ads.length) return box.innerHTML = warn + msg('Sin anuncios con estos filtros.');
     box.innerHTML = warn + `<table><thead><tr><th class="ic"></th><th>Anunciante</th><th class="n">Precio</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
-      d.ads.map((a, i) => `<tr class="${i === 0 ? 'best' : ''}">
+      d.ads.map((a, i) => { const pk = c === 'sell', k = a.ex + '|' + a.nick;
+      return `<tr class="${i === 0 ? 'best' : ''}${pk ? ' pick' : ''}${pk && S.sel.sell === k ? ' sel' : ''}"${pk ? ` data-k="${esc(k)}" tabindex="0" title="Usar en Arbitraje"` : ''}>
         <td class="ic">${icon(EXM[a.ex]?.logo, EXM[a.ex]?.name)}</td>
         <td>${esc(a.nick)}${badgeHtml(a)}
-          <div class="sub">${esc(EXM[a.ex]?.name || a.ex)}${a.orders != null ? ' · ' + a.orders + ' órdenes/mes' : ''}${a.rate != null ? ' · ' + a.rate.toFixed(0) + '%' : ''}</div>
-          ${payRow(a.methods)}</td>
+          <div class="sub">${esc(EXM[a.ex]?.name || a.ex)}${a.orders != null ? ' · ' + a.orders + ' órdenes/mes' : ''}${a.rate != null ? ' · ' + a.rate.toFixed(0) + '%' : ''}</div></td>
         <td class="n price">${money(a.price)}</td>
-        <td class="n">${a.available != null ? fmtN(a.available) + ' USDT' : '—'}<div class="sub nw">Mín ${fl(a.min)}</div><div class="sub nw">Máx ${fl(a.max)}</div></td></tr>`).join('') + '</tbody></table>';
+        <td class="n">${a.available != null ? fmtN(a.available) + ' USDT' : '—'}<div class="sub nw">Mín ${fl(a.min)}</div><div class="sub nw">Máx ${fl(a.max)}</div>${payRow(a.methods)}</td></tr>`; }).join('') + '</tbody></table>';
   }
 }
 const renderAll = () => { renderCol('buy'); renderCol('sell'); renderArb(); };
 const rate4 = n => n.toLocaleString('es-AR', {minimumFractionDigits: 4, maximumFractionDigits: 4});
 function renderArb() {
   const out = $('#arb-out');
-  const best = (S.rates?.providers || []).filter(p => !S.hidden.has(p.id) && !p.stale && p.buy != null).sort((a, b) => a.buy - b.buy)[0];
-  const top = S.p2p.sell?.ads?.[0]; // la lista de venta está ordenada: el primero es el precio más alto
-  if (!best || !top) return out.innerHTML = `<div class="sub">${!best ? 'Esperando precios del dólar oficial…' : 'Mostrá "USDT P2P" en la columna Venta para calcular.'}</div>`;
-  const be = best.buy / top.price, auto = S.rates?.fiwind?.rate, r = S.fw?.v || auto;
+  const provs = (S.rates?.providers || []).filter(p => !S.hidden.has(p.id) && p.buy != null);
+  const ads = S.p2p.sell?.ads || [];
+  const bestB = provs.filter(p => !p.stale).sort((a, b) => a.buy - b.buy)[0];
+  const bestS = ads[0]; // la lista de venta está ordenada: el primero es el precio más alto
+  const selB = S.sel.buy && provs.find(p => p.id === S.sel.buy), selS = S.sel.sell && ads.find(a => a.ex + '|' + a.nick === S.sel.sell);
+  const buy = selB || bestB, top = selS || bestS;
+  if (!buy || !top) return out.innerHTML = `<div class="sub">${!buy ? 'Esperando precios del dólar oficial…' : 'Mostrá "USDT P2P" en la columna Venta para calcular.'}</div>`;
+  const lost = (S.sel.buy && !selB && 'compra') || (S.sel.sell && !selS && 'venta');
+  const be = buy.buy / top.price, auto = S.rates?.fiwind?.rate, r = S.fw?.v || auto;
   let res = '';
   if (r) {
-    const g = r * top.price / best.buy - 1;
+    const g = r * top.price / buy.buy - 1;
     res = `<dt>Tasa usada · ${S.fw?.v ? 'manual' : 'automática'}</dt><dd>${rate4(r)} USDT por USD</dd>
       <dt>Resultado</dt><dd class="res ${g >= 0 ? 'pos' : 'neg'}">${g >= 0 ? '+' : ''}${(g * 100).toFixed(2).replace('.', ',')}%</dd>
-      <dd class="sub">≈ ${g >= 0 ? '+' : '−'}${fl(Math.abs(g) * best.buy * 1000)} por cada USD 1.000, sin comisiones</dd>`;
+      <dd class="sub">≈ ${g >= 0 ? '+' : '−'}${fl(Math.abs(g) * buy.buy * 1000)} por cada USD 1.000, sin comisiones</dd>`;
   }
   const fa = S.rates?.fiwind?.at ? Date.parse(S.rates.fiwind.at) : null;
   if (res && !S.fw?.v && fa && Date.now() - fa > 1800000) res += `<dd class="sub neg">El precio de Fiwind en ComparaDólar no cambia desde ${ago(fa)}: confirmá la tasa en la app.</dd>`;
-  out.innerHTML = `<dt>Dólar oficial más barato</dt><dd>${esc(best.name)} · ${money(best.buy)}</dd>
-    <dt>Mejor precio para vender USDT</dt><dd>${esc(EXM[top.ex]?.name || top.ex)} · ${money(top.price)}</dd>
-    <dt>Para empatar necesitás al menos</dt><dd>${rate4(be)} USDT por USD</dd>${res}`;
+  const tagB = selB ? 'elegido' : 'mejor precio', tagS = selS ? 'elegido' : 'mejor precio';
+  const note = lost ? `<dd class="sub neg">Tu selección de ${lost} ya no figura en la lista: se usa el mejor precio.</dd>` : '';
+  const reset = S.sel.buy || S.sel.sell ? `<dd><button class="lnk" id="arb-reset">Volver a los mejores precios</button></dd>` : `<dd class="sub">Tocá una fila de Compra (dólar oficial) y una de Venta (USDT P2P) para elegirlas.</dd>`;
+  out.innerHTML = `<dt>Compra de dólar oficial <span class="tag">${tagB}</span></dt><dd>${esc(buy.name)} · ${money(buy.buy)}${buy.stale ? ' <span class="chip">Desactualizado</span>' : ''}</dd>
+    <dt>Venta de USDT <span class="tag">${tagS}</span></dt><dd>${esc(top.nick)} · ${esc(EXM[top.ex]?.name || top.ex)} · ${money(top.price)}</dd>
+    <dt>Para empatar necesitás al menos</dt><dd>${rate4(be)} USDT por USD</dd>${res}${note}${reset}`;
 }
 function fwAt() {
   const el = $('#fw-at'), t = S.fw?.at, auto = S.rates?.fiwind?.rate;
@@ -290,6 +306,16 @@ document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e
   seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
   renderCol(c); renderStatus(); ensure();
 }));
+
+// Elegir fila para el arbitraje (Compra: dólar oficial · Venta: USDT P2P)
+for (const c of ['buy', 'sell']) {
+  const box = $('#b-' + c);
+  const pick = e => { const tr = e.target.closest('tr.pick'); if (!tr) return;
+    const k = tr.dataset.k; S.sel[c] = S.sel[c] === k ? null : k; renderCol(c); renderArb(); };
+  box.addEventListener('click', pick);
+  box.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr.pick')) { e.preventDefault(); pick(e); } });
+}
+$('#arb-out').addEventListener('click', e => { if (e.target.id === 'arb-reset') { S.sel = {buy: null, sell: null}; renderAll(); } });
 
 // Panel de filtros
 function buildList() {
