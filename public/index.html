@@ -12,7 +12,7 @@
 @media (prefers-color-scheme:dark){:root{--tile:#2a3947;--bg:#10161c;--card:#18212a;--ink:#e8eef3;--mute:#8d9cab;--line:#2a3743;--acc:#5aa8f5;--sell:#f0a15c;--best:#15332a;--selbg:#2a2447}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif}
-main{max-width:1680px;margin:0 auto;padding:20px 16px 48px}
+main{max-width:1580px;margin:0 auto;padding:20px 16px 48px}
 header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
 h1{font-size:26px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
 .status{color:var(--mute);font-size:13px;display:flex;align-items:center;gap:8px;min-height:20px}
@@ -117,12 +117,18 @@ html[data-theme=retro]{color-scheme:dark;
 [data-theme=retro] body::after{background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.5) 100%)}
 [data-theme=retro] main{position:relative;z-index:1;background:var(--bg)}
 @media (min-width:900px){[data-theme=retro] main{margin-block:16px;border:1px solid var(--line);box-shadow:inset 0 0 80px rgba(var(--ink-rgb),calc(var(--glow)*.05))}}
-/* marco de pantalla (solo escritorio, sin curvatura): bisel de monitor alrededor del cuadro principal */
+/* marco de pantalla CRT (solo escritorio): bisel grueso, pantalla hundida con bordes oscurecidos y reflejo de vidrio.
+   El contenido no se deforma: la sensación de curvatura sale de las sombras y el brillo, así los números siguen legibles. */
 @media (min-width:900px){
-  [data-theme=retro]:not([data-noframe]) body{padding:30px 0}
-  [data-theme=retro]:not([data-noframe]) main{width:calc(100% - 72px);margin:0 auto;padding:28px 28px 40px;border:2px solid #000;border-radius:24px;
-    box-shadow:inset 0 0 0 1px rgba(var(--ink-rgb),.22),inset 0 0 90px rgba(var(--ink-rgb),calc(var(--glow)*.07)),inset 0 0 26px rgba(0,0,0,.85),
-      0 0 0 10px #121815,0 0 0 11px #31443a,0 0 0 14px #070a08,0 0 calc(var(--glow)*36px) rgba(var(--ink-rgb),calc(var(--glow)*.14)),0 22px 48px rgba(0,0,0,.75)}
+  [data-theme=retro]:not([data-noframe]) body{padding:64px 0}
+  [data-theme=retro]:not([data-noframe]) main{width:calc(100% - 150px);margin:0 auto;border:0;border-radius:64px/52px;
+    box-shadow:0 0 0 3px #000,0 0 0 16px #0b0f0d,0 0 0 17px #3b4a42,0 0 0 46px #1b221e,0 0 0 47px #4a5b52,0 0 0 49px #0a0d0b,
+      0 0 calc(var(--glow)*60px) rgba(var(--ink-rgb),calc(var(--glow)*.16)),0 30px 60px rgba(0,0,0,.8)}
+  [data-theme=retro]:not([data-noframe]) main::before,[data-theme=retro]:not([data-noframe]) main::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:50}
+  /* bordes que se oscurecen = vidrio abombado */
+  [data-theme=retro]:not([data-noframe]) main::before{box-shadow:inset 0 0 70px 14px rgba(0,0,0,.55),inset 0 0 160px 20px rgba(0,0,0,.35),inset 0 0 0 2px rgba(var(--ink-rgb),.18)}
+  /* reflejo del vidrio */
+  [data-theme=retro]:not([data-noframe]) main::after{background:radial-gradient(ellipse 60% 38% at 22% 0%,rgba(255,255,255,.075),transparent 70%),linear-gradient(115deg,rgba(255,255,255,.035) 0,transparent 28%)}
 }
 /* lluvia Matrix: solo en el fondo, por fuera del cuadro principal; solo escritorio */
 #rain{display:none;position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
@@ -355,7 +361,7 @@ function renderCol(c) {
       return `<tr class="${i === 0 ? 'best' : ''}${pk ? ' pick' : ''}${pk && S.sel.sell === k ? ' sel' : ''}"${pk ? ` data-k="${esc(k)}" tabindex="0" title="Usar en Arbitraje"` : ''}>
         <td class="ic">${icon(EXM[a.ex]?.logo, EXM[a.ex]?.name)}</td>
         <td>${esc(a.nick)}${badgeHtml(a)}
-          <div class="sub">${esc(EXM[a.ex]?.name || a.ex)}${a.orders != null ? ' · ' + a.orders + ' órdenes/mes' : ''}${a.rate != null ? ' · ' + a.rate.toFixed(0) + '%' : ''}</div></td>
+          <div class="sub">${[a.orders != null ? a.orders + ' órdenes/mes' : '', a.rate != null ? a.rate.toFixed(0) + '%' : ''].filter(Boolean).join(' · ')}</div></td>
         <td class="n price">${money(a.price)}</td>
         <td class="n">${a.available != null ? fmtN(a.available) + ' USDT' : '—'}<div class="sub nw">Mín ${fl(a.min)}</div><div class="sub nw">Máx ${fl(a.max)}</div>${payRow(a.methods)}</td></tr>`; }).join('') + '</tbody></table>';
   }
@@ -565,8 +571,7 @@ function rainSetup() {
   rain.cols = [];
   for (let x = 0; x < w; x += rain.size) {
     if (x + rain.size > r.left - gap && x < r.right + gap) continue; // columnas bajo el cuadro principal: no se dibujan
-    if (Math.random() < .35) continue; // más aire entre columnas
-    rain.cols.push({x, row: -Math.random() * n, v: .25 + Math.random() * .55});
+    for (let k = 0; k < 2; k++) rain.cols.push({x, row: Math.random() * n * (k ? 1 : .5) - n * .2, v: .3 + Math.random() * .7}); // dos "gotas" por columna
   }
   const g = cv.getContext('2d'); g.fillStyle = '#030905'; g.fillRect(0, 0, w, h);
 }
@@ -574,15 +579,15 @@ function rainFrame(t) {
   rain.raf = requestAnimationFrame(rainFrame);
   if (t - rain.last < 50) return; rain.last = t;
   const cv = $('#rain'), g = cv.getContext('2d'), h = cv.height, n = Math.ceil(h / rain.size);
-  g.fillStyle = 'rgba(3,9,5,.14)'; g.fillRect(0, 0, cv.width, h);
+  g.fillStyle = 'rgba(3,9,5,.09)'; g.fillRect(0, 0, cv.width, h);
   g.font = (rain.size - 2) + 'px "Share Tech Mono",monospace'; g.textBaseline = 'top';
   for (const c of rain.cols) {
     const prev = Math.floor(c.row); c.row += c.v;
     if (Math.floor(c.row) !== prev && c.row > 0) {
-      g.fillStyle = Math.random() < .1 ? 'rgba(200,255,225,.85)' : 'rgba(98,245,168,.55)';
+      g.fillStyle = Math.random() < .12 ? 'rgba(210,255,230,.95)' : 'rgba(98,245,168,.8)';
       g.fillText(RAIN_CH[Math.random() * RAIN_CH.length | 0], c.x, Math.floor(c.row) * rain.size);
     }
-    if (c.row > n && Math.random() > .975) { c.row = -Math.random() * 12; c.v = .25 + Math.random() * .55; }
+    if (c.row > n && Math.random() > .94) { c.row = -Math.random() * 10; c.v = .3 + Math.random() * .7; }
   }
 }
 function rainSync() {
