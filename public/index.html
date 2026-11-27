@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dólar hoy · oficial y USDT P2P</title>
-<script>try{var r=document.documentElement,L=function(k){return JSON.parse(localStorage.getItem(k))};if(L('theme')==='retro')r.dataset.theme='retro';var f=L('fx');if(f){r.style.setProperty('--glow',f.glow/100);r.style.setProperty('--scan',f.scan/100)}}catch(e){}</script>
+<script>try{var r=document.documentElement,L=function(k){return JSON.parse(localStorage.getItem(k))};if(L('theme')==='retro')r.dataset.theme='retro';var f=L('fx');if(f){r.style.setProperty('--glow',f.glow/100);r.style.setProperty('--scan',f.scan/100);if(f.frame===false)r.dataset.noframe=''}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
 <style>
@@ -12,7 +12,7 @@
 @media (prefers-color-scheme:dark){:root{--tile:#2a3947;--bg:#10161c;--card:#18212a;--ink:#e8eef3;--mute:#8d9cab;--line:#2a3743;--acc:#5aa8f5;--sell:#f0a15c;--best:#15332a;--selbg:#2a2447}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif}
-main{max-width:1380px;margin:0 auto;padding:20px 16px 48px}
+main{max-width:1680px;margin:0 auto;padding:20px 16px 48px}
 header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px}
 h1{font-size:26px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
 .status{color:var(--mute);font-size:13px;display:flex;align-items:center;gap:8px;min-height:20px}
@@ -25,8 +25,8 @@ h1{font-size:26px;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
 .ibtn[aria-expanded=true],.ibtn[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
 #retro-opts input[type=range]{width:150px}
 button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.cols{display:grid;grid-template-columns:1fr 1fr 270px;gap:16px;align-items:start}
-@media (max-width:1180px){.cols{grid-template-columns:1fr 1fr}.arb{grid-column:1/-1}}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 400px;gap:16px;align-items:start}
+@media (max-width:1280px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.arb{grid-column:1/-1;width:100%;max-width:560px;justify-self:center}}
 @media (max-width:820px){.cols{grid-template-columns:1fr}}
 .col{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--acc);border-radius:10px;overflow:hidden}
 .col.sell{border-top-color:var(--sell)}
@@ -76,22 +76,24 @@ td.ic,th.ic{width:1%;padding-right:0}
 .vb{width:15px;height:15px;vertical-align:-2px;margin-left:5px}
 .arb{padding-bottom:12px;border-top-color:#8a6dd8}
 .arb .in{padding:0 14px}
-.calc{width:calc(100% - 28px);margin:2px 14px 0;font-size:13px;border-collapse:collapse}
+.calc{width:calc(100% - 32px);margin:2px 16px 0;font-size:13px;border-collapse:collapse;table-layout:fixed}
 .calc td{padding:4px 0;border-bottom:1px solid var(--line);vertical-align:middle}
-.calc td.v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;width:50%}
-.calc td.x{text-align:right;color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px}
+.calc td:first-child{padding-right:8px;overflow-wrap:anywhere}
+.calc td.v{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.calc td.x{text-align:right;color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px;padding-right:2px}
 .calc .sub{font-weight:400}
 .calc .who{font-size:12px;overflow-wrap:anywhere}
 .calc .neg{color:#c0392b;font-size:11.5px}
 .calc tr.sum td,.calc tr.tot td{border-top:1px solid var(--ink)}
+.calc tr.tot td:first-child{white-space:nowrap;overflow-wrap:normal}
 .calc tr.tot td{font-size:14.5px;border-bottom:0}
-.calc input{width:100%;margin:0;padding:4px 7px;text-align:right;font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
+.calc input{width:100%;min-width:0;margin:0;padding:4px 7px;text-align:right;font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
 .calc input.auto{color:var(--mute);font-weight:500}
 .inb{position:relative}
 .inb input{padding-left:38px}
 .inb-t{position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:10.5px;font-weight:500;color:var(--mute)}
 .inb-t button{border:0;background:none;padding:0;font:inherit;color:var(--acc);cursor:pointer;text-decoration:underline}
-.arb-msg{padding:8px 14px 0}
+.arb-msg{padding:8px 16px 0}
 .pos{color:#0a9d63}.neg{color:#c0392b}
 .warn{padding:8px 14px;font-size:12.5px;color:#c0392b;border-top:1px solid var(--line)}
 select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
@@ -113,7 +115,18 @@ html[data-theme=retro]{color-scheme:dark;
 [data-theme=retro] body::before,[data-theme=retro] body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100}
 [data-theme=retro] body::before{background:repeating-linear-gradient(to bottom,rgba(0,0,0,.6) 0 1px,transparent 1px 3px);opacity:var(--scan)}
 [data-theme=retro] body::after{background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.5) 100%)}
+[data-theme=retro] main{position:relative;z-index:1;background:var(--bg)}
 @media (min-width:900px){[data-theme=retro] main{margin-block:16px;border:1px solid var(--line);box-shadow:inset 0 0 80px rgba(var(--ink-rgb),calc(var(--glow)*.05))}}
+/* marco de pantalla (solo escritorio, sin curvatura): bisel de monitor alrededor del cuadro principal */
+@media (min-width:900px){
+  [data-theme=retro]:not([data-noframe]) body{padding:30px 0}
+  [data-theme=retro]:not([data-noframe]) main{width:calc(100% - 72px);margin:0 auto;padding:28px 28px 40px;border:2px solid #000;border-radius:24px;
+    box-shadow:inset 0 0 0 1px rgba(var(--ink-rgb),.22),inset 0 0 90px rgba(var(--ink-rgb),calc(var(--glow)*.07)),inset 0 0 26px rgba(0,0,0,.85),
+      0 0 0 10px #121815,0 0 0 11px #31443a,0 0 0 14px #070a08,0 0 calc(var(--glow)*36px) rgba(var(--ink-rgb),calc(var(--glow)*.14)),0 22px 48px rgba(0,0,0,.75)}
+}
+/* lluvia Matrix: solo en el fondo, por fuera del cuadro principal; solo escritorio */
+#rain{display:none;position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+@media (min-width:900px){[data-theme=retro][data-rain] #rain{display:block}}
 @keyframes crt-on{0%{opacity:.15;filter:brightness(2.4) blur(1px)}40%{opacity:1;filter:brightness(1.6)}100%{filter:none}}
 @keyframes blink{50%{opacity:0}}
 [data-theme=retro] main.boot{animation:crt-on .45s ease-out}
@@ -186,6 +199,7 @@ html[data-theme=retro]{color-scheme:dark;
 </style>
 </head>
 <body>
+<canvas id="rain" aria-hidden="true"></canvas>
 <main>
   <header>
     <div><h1>Dólar hoy</h1><div class="status" id="status" aria-live="polite"><span class="dot"></span><span>Cargando…</span></div></div>
@@ -207,7 +221,7 @@ html[data-theme=retro]{color-scheme:dark;
       <div class="seg" data-c="sell"><button data-s="oficial" aria-pressed="true">Dólar oficial</button><button data-s="p2p" aria-pressed="false">USDT P2P</button></div>
       <div class="box" id="b-sell"></div></section>
     <aside class="col arb"><h2>Arbitraje</h2>
-      <table class="calc" id="calc"><tbody>
+      <table class="calc" id="calc"><colgroup><col style="width:36%"><col style="width:42%"><col style="width:22%"></colgroup><tbody>
         <tr><td>Compra ARS/USD<div class="sub who" id="c-buyname"></div></td><td class="v"><span class="tag" id="c-tagb"></span> <span id="c-buy">—</span></td><td class="x" id="c-spread"></td></tr>
         <tr><td>Total ARS</td><td class="v"><input id="ars" inputmode="decimal" autocomplete="off" aria-label="Total en pesos"></td><td class="x"></td></tr>
         <tr><td>Total USD</td><td class="v"><input id="usd" inputmode="decimal" autocomplete="off" aria-label="Total en dólares"></td><td class="x"></td></tr>
@@ -233,6 +247,8 @@ html[data-theme=retro]{color-scheme:dark;
     <details id="retro-opts" hidden><summary>Pantalla retro</summary>
       <label class="fld">Brillo <input type="range" id="fx-glow" min="0" max="100" step="5" aria-label="Intensidad del brillo"></label>
       <label class="fld">Scanlines <input type="range" id="fx-scan" min="0" max="100" step="5" aria-label="Intensidad de las scanlines"></label>
+      <label class="chk"><input type="checkbox" id="fx-frame"> Marco de pantalla <span class="sub">(solo escritorio)</span></label>
+      <label class="chk"><input type="checkbox" id="fx-rain"> Lluvia Matrix de fondo <span class="sub">(solo escritorio)</span></label>
       <div class="acts"><button id="fx-reset">Restablecer</button></div></details>
     <details><summary>Actualización automática</summary>
       <label class="fld">Dólar oficial <select id="ev-rates"></select></label>
@@ -526,13 +542,57 @@ document.addEventListener('visibilitychange', () => {
 });
 // Estilo retro: interruptor y ajustes de brillo / scanlines (se recuerdan en localStorage)
 const root = document.documentElement;
-const FX0 = {glow: 60, scan: 50};
+const FX0 = {glow: 60, scan: 50, frame: true, rain: false};
 const FX = {...FX0, ...LS.get('fx', {})};
 const isRetro = () => root.dataset.theme === 'retro';
 function applyFx() {
   root.style.setProperty('--glow', FX.glow / 100); root.style.setProperty('--scan', FX.scan / 100);
   $('#fx-glow').value = FX.glow; $('#fx-scan').value = FX.scan;
+  $('#fx-frame').checked = !!FX.frame; $('#fx-rain').checked = !!FX.rain;
+  root.toggleAttribute('data-noframe', !FX.frame);
+  rainSync();
 }
+
+// Lluvia Matrix (opcional, apagada por defecto). Solo dibuja en las franjas laterales, a ~20 fps,
+// se pausa con la pestaña oculta y no corre en móvil, con prefers-reduced-motion ni fuera del estilo retro.
+const rain = {run: false, cols: [], size: 16, last: 0, raf: 0, timer: 0};
+const RAIN_CH = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789$';
+const rainWanted = () => isRetro() && FX.rain && innerWidth >= 900 && !matchMedia('(prefers-reduced-motion: reduce)').matches && !document.hidden;
+function rainSetup() {
+  const cv = $('#rain'), w = innerWidth, h = innerHeight;
+  cv.width = w; cv.height = h;
+  const r = $('main').getBoundingClientRect(), gap = 26, n = Math.ceil(h / rain.size);
+  rain.cols = [];
+  for (let x = 0; x < w; x += rain.size) {
+    if (x + rain.size > r.left - gap && x < r.right + gap) continue; // columnas bajo el cuadro principal: no se dibujan
+    if (Math.random() < .35) continue; // más aire entre columnas
+    rain.cols.push({x, row: -Math.random() * n, v: .25 + Math.random() * .55});
+  }
+  const g = cv.getContext('2d'); g.fillStyle = '#030905'; g.fillRect(0, 0, w, h);
+}
+function rainFrame(t) {
+  rain.raf = requestAnimationFrame(rainFrame);
+  if (t - rain.last < 50) return; rain.last = t;
+  const cv = $('#rain'), g = cv.getContext('2d'), h = cv.height, n = Math.ceil(h / rain.size);
+  g.fillStyle = 'rgba(3,9,5,.14)'; g.fillRect(0, 0, cv.width, h);
+  g.font = (rain.size - 2) + 'px "Share Tech Mono",monospace'; g.textBaseline = 'top';
+  for (const c of rain.cols) {
+    const prev = Math.floor(c.row); c.row += c.v;
+    if (Math.floor(c.row) !== prev && c.row > 0) {
+      g.fillStyle = Math.random() < .1 ? 'rgba(200,255,225,.85)' : 'rgba(98,245,168,.55)';
+      g.fillText(RAIN_CH[Math.random() * RAIN_CH.length | 0], c.x, Math.floor(c.row) * rain.size);
+    }
+    if (c.row > n && Math.random() > .975) { c.row = -Math.random() * 12; c.v = .25 + Math.random() * .55; }
+  }
+}
+function rainSync() {
+  const want = rainWanted();
+  root.toggleAttribute('data-rain', isRetro() && FX.rain);
+  if (want && !rain.run) { rain.run = true; rainSetup(); rain.raf = requestAnimationFrame(rainFrame); }
+  else if (!want && rain.run) { rain.run = false; cancelAnimationFrame(rain.raf); }
+}
+addEventListener('resize', () => { clearTimeout(rain.timer); rain.timer = setTimeout(() => { if (rain.run) rainSetup(); rainSync(); }, 200); });
+document.addEventListener('visibilitychange', rainSync);
 function syncTheme() { $('#tbtn').setAttribute('aria-pressed', isRetro()); $('#retro-opts').hidden = !isRetro(); applyFx(); }
 $('#tbtn').onclick = () => {
   if (isRetro()) root.removeAttribute('data-theme'); else root.dataset.theme = 'retro';
@@ -542,6 +602,8 @@ $('#tbtn').onclick = () => {
 };
 for (const [id, k] of [['#fx-glow', 'glow'], ['#fx-scan', 'scan']])
   $(id).addEventListener('input', e => { FX[k] = +e.target.value; LS.set('fx', FX); applyFx(); });
+for (const [id, k] of [['#fx-frame', 'frame'], ['#fx-rain', 'rain']])
+  $(id).addEventListener('change', e => { FX[k] = e.target.checked; LS.set('fx', FX); applyFx(); if (k === 'rain') setTimeout(() => rain.run && rainSetup(), 0); });
 $('#fx-reset').onclick = () => { Object.assign(FX, FX0); LS.set('fx', FX); applyFx(); };
 
 setInterval(renderStatus, 1000);
