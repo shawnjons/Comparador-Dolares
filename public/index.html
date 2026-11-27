@@ -41,6 +41,7 @@ td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:0}
 .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.best td{background:var(--best)}
+tr.nq td{opacity:.5}
 tr.pick{cursor:pointer}
 tr.pick:hover td{background:var(--tile)}
 tr.pick:focus-visible{outline:2px solid #8a6dd8;outline-offset:-2px}
@@ -342,11 +343,12 @@ function renderCol(c) {
     const errs = Object.entries(d.errors || {}).map(([k, v]) => `${EXM[k]?.name || k} (${v})`);
     const warn = errs.length ? `<div class="warn">No se pudo leer: ${esc(errs.join(' · '))}</div>` : '';
     if (!d.ads.length) return box.innerHTML = warn + msg('Sin anuncios con estos filtros.');
+    const first = d.ads.findIndex(a => !a.noQuota); // el mejor precio es el primero que sí tiene cupo
     box.innerHTML = warn + `<table><thead><tr><th class="ic"></th><th>Anunciante</th><th class="n">Precio</th><th class="n">Disponible · límites</th></tr></thead><tbody>` +
-      d.ads.map((a, i) => { const pk = c === 'sell', k = a.ex + '|' + a.nick;
-      return `<tr class="${i === 0 ? 'best' : ''}${pk ? ' pick' : ''}${pk && S.sel.sell === k ? ' sel' : ''}"${pk ? ` data-k="${esc(k)}" tabindex="0" title="Usar en Arbitraje"` : ''}>
+      d.ads.map((a, i) => { const nq = !!a.noQuota, pk = c === 'sell' && !nq, k = a.ex + '|' + a.nick;
+      return `<tr class="${i === first ? 'best' : ''}${nq ? ' nq' : ''}${pk ? ' pick' : ''}${pk && S.sel.sell === k ? ' sel' : ''}"${pk ? ` data-k="${esc(k)}" tabindex="0" title="Usar en Arbitraje"` : ''}${nq ? ' title="Sin cupo ahora: el anunciante no tiene USDT disponibles para operar dentro de sus límites"' : ''}>
         <td class="ic">${icon(EXM[a.ex]?.logo, EXM[a.ex]?.name)}</td>
-        <td>${esc(a.nick)}${badgeHtml(a)}
+        <td>${esc(a.nick)}${badgeHtml(a)}${nq ? '<span class="chip">Sin cupo</span>' : ''}
           <div class="sub">${[a.orders != null ? a.orders + ' órdenes/mes' : '', a.rate != null ? a.rate.toFixed(0) + '%' : ''].filter(Boolean).join(' · ')}</div></td>
         <td class="n price">${money(a.price)}</td>
         <td class="n">${a.available != null ? fmtN(a.available) + ' USDT' : '—'}<div class="sub nw">Mín ${fl(a.min)}</div><div class="sub nw">Máx ${fl(a.max)}</div>${payRow(a.methods)}</td></tr>`; }).join('') + '</tbody></table>';
@@ -364,7 +366,7 @@ const put = (id, h) => { $('#' + id).innerHTML = h; };
 const sg = x => x >= 0 ? '+' : '−';
 function renderArb() {
   const provs = (S.rates?.providers || []).filter(p => !S.hidden.has(p.id) && p.buy != null);
-  const ads = S.p2p.sell?.ads || [];
+  const ads = (S.p2p.sell?.ads || []).filter(a => !a.noQuota); // los anuncios sin cupo no se usan en el arbitraje
   const bestB = provs.filter(p => !p.stale).sort((a, b) => a.buy - b.buy)[0];
   const bestS = ads[0]; // la lista de venta está ordenada: el primero es el precio más alto
   const selB = S.sel.buy && provs.find(p => p.id === S.sel.buy), selS = S.sel.sell && ads.find(a => a.ex + '|' + a.nick === S.sel.sell);

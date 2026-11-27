@@ -53,6 +53,15 @@ async function bybitPayMap() {
 // Nivel de comerciante. Binance: vipLevel 1/2/3+ = bronce/plata/oro. Bybit: etiqueta VA1/VA2/VA3.
 const tierOf = n => (n >= 3 ? 'gold' : n === 2 ? 'silver' : n === 1 ? 'bronze' : null);
 
+// Límites reales en este momento (como los muestra cada exchange): el máximo es el menor entre el máximo configurado
+// por el anunciante y lo que le queda disponible (USDT disponibles × precio). Sin cupo = no se puede operar ahora.
+function withLimits(a) {
+  const cap = a.available != null ? Math.floor(a.available * a.price) : null;
+  const max = a.max != null && cap != null ? Math.min(a.max, cap) : (a.max ?? cap);
+  const noQuota = a.available === 0 || max === 0 || (max != null && a.min != null && max < a.min);
+  return { ...a, maxCfg: a.max, max, noQuota };
+}
+
 const adapters = {
   async binance(type, merchant) {
     const j = await http('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
@@ -125,7 +134,7 @@ exports.handler = async (event) => {
     const ex = want[i];
     if (r.status === 'rejected') { errors[ex] = r.reason.message; return; }
     raw[ex] = r.value.raw; sample[ex] = r.value.sample;
-    r.value.ads.filter(a => a.price != null && a.nick).slice(0, PER_EXCHANGE).forEach(a => ads.push({ ...a, ex }));
+    r.value.ads.filter(a => a.price != null && a.nick).slice(0, PER_EXCHANGE).forEach(a => ads.push({ ...withLimits(a), ex }));
   });
   ads.sort((a, b) => type === 'BUY' ? a.price - b.price : b.price - a.price);
 
